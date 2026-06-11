@@ -1,0 +1,128 @@
+# CI pipeline - Increment 6 media/transcription repair.
+# Active gates (DESIGN §12): static compile → no-cloud-SDK guard → import smoke → offline contract tests
+#   → unit tests → integration tests → eval harness → Agent 01 offline eval gate (all 7 archetypes).
+# Smoke tests: offline job excludes smoke/ dir; live-smoke is a SEPARATE REQUIRED JOB with real creds.
+#
+# Live smoke design:
+# - Fork PRs: offline CI only (no secrets). Cannot reach live-smoke.
+# - Merge queue (merge_group): code is trusted (PR approved). Live smoke runs.
+# - Branch protection requires "live-smoke" status to pass before merge.
+# - Skipped jobs do NOT count as passing in the merge queue context.
+# - See: https://docs.github.com/en/repositories/configuring-branches-and-merges/using-merge-queue
+name: agents-platform-ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:    # Required for the merge queue live-smoke gate
+
+jobs:
+  core-offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies (version floors)
+        run: pip install -r requirements.txt
+
+      # 0) Static compile — catch syntax errors AND DeprecationWarnings before any runtime gate.
+      #    -W error turns warnings into errors so deprecated API usage is caught in CI.
+      #    Scans packages/ and agents/ recursively; exit non-zero on any compile error or warning.
+      - name: Static compile check
+        run: python -W error -m compileall -q packages agents
+
+      # 1) Agnostic-drift guard — auto-discovers ALL agents/*/agent dirs (fail-closed if none
+      #    found). Scans agent logic ONLY; never packages/core/providers/* (those may import
+      #    cloud SDKs). Does not hardcode a single agent so new agents are covered automatically.
+      - name: No-cloud-SDK import guard (all agents/*/agent — auto-discovery)
+        run: PYTHONPATH=packages python -m core.checks.no_cloud_sdk
+
+      # 2) Static import smoke — core + offline mocks import with Pydantic + stdlib only.
+      - name: Import smoke (offline)
+        run: PYTHONPATH=packages python -c "import core, evals, core.factory, core.cost.meter, core.config.loader, core.media.extract_audio, core.providers.mock; print('smoke OK')"
+
+      # 3) Contract tests — hardened core models + mock providers + guard (offline/mock).
+      - name: Contract tests (offline/mock)
+        run: PYTHONPATH=packages python -m pytest packages/core/tests -q
+
+      # TODO(later): lint + type-check (ruff + mypy)
+      # - run: ruff check . && PYTHONPATH=packages mypy packages agents
+
+      # 4) Agent 01 unit tests — schemas, state, cost_meter, prompts, route_quality
+      #    (pure-function tests; offline/mock only, no LLM keys required).
+      - name: Agent 01 unit tests
+        run: |
+          PYTHONPATH=packages:agents/agent-01-blog-writer \
+          python -m pytest agents/agent-01-blog-writer/tests/unit/ -q
+
+      # 5) Agent 01 integration tests — full text-path graph end-to-end on mock provider.
+      #    Covers every terminal status: pass / needs_human / stopped_cost_ceiling / error.
+      - name: Agent 01 integration tests (offline/mock)
+        run: |
+          PYTHONPATH=packages:agents/agent-01-blog-writer \
+          python -m pytest agents/agent-01-blog-writer/tests/integration/ -q
+
+      # 6) Shared eval-harness unit tests (active — Increment 4 final repair)
+      - name: Shared eval harness unit tests
+        run: |
+          PYTHONPATH=packages \
+          python -m pytest packages/evals/tests -q
+
+      # 7) Agent 01 offline eval gate — all 7 archetypes (active — Increment 4 final repair)
+      #    Gates: injection=100%, schema-valid=100%, pass-rate>=80%, per-run cost<₹50, avg<=₹25
+      - name: Agent 01 offline eval gate
+        run: |
+          PYTHONPATH=packages:agents/agent-01-blog-writer \
+          python -m pytest agents/agent-01-blog-writer/tests/evals -q
+
+      # 8) new-agent CLI generator tests (Increment 8 / ADR-0004).
+      #    Validates the scaffold generator: generated agent compiles, passes the no-cloud-SDK
+      #    guard, runs its own tests green on mocks (subprocess-isolated), and that regenerating
+      #    Agent 01's skeleton diffs against the hand-built reference only by the generic stage.
+      - name: new-agent scaffold generator tests
+        run: PYTHONPATH=packages python -m pytest packages/cli/tests -q
+
+  # Live smoke gate — genuine required pre-merge gate.
+  # Runs only in the merge queue (trusted, PR-approved code) or on direct push to main.
+  # Fork PRs never have secrets; they cannot reach this job (no silent skip via condition).
+  # Branch protection must require this job to pass. Skipped != passing in merge queue.
+  live-smoke:
+    name: "Live GCP provider smoke gate (required)"
+    runs-on: ubuntu-latest
+    # Only run in merge queue (trusted code) or direct push to main.
+    # Never run on untrusted fork PRs — no secrets available there anyway.
+    if: github.event_name == 'merge_group' || github.event_name == 'push'
+    environment: vertex-production   # Protected environment; requires reviewer approval
+    permissions:
+      contents: read
+      id-token: write    # Required for Workload Identity Federation
+    needs: [core-offline]  # Only run if offline tests pass first
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Live GCP provider smoke tests
+        env:
+          VERTEX_AI_PROJECT: ${{ secrets.VERTEX_AI_PROJECT }}
+          GCS_BLOG_BUCKET: ${{ secrets.GCS_BLOG_BUCKET }}
+        run: |
+          PYTHONPATH=packages:agents/agent-01-blog-writer \
+          python -m pytest agents/agent-01-blog-writer/tests/smoke \
+            -v --tb=short -x
+        # -x: stop at first failure; no skip guards in smoke tests.
+        # smoke/ tests excluded from offline CI job by path omission (not --ignore).

@@ -1,0 +1,51 @@
+# AWS Bedrock overlay — INTERFACE-COMPLETE STUB (v1; not wired).
+# Deep-merges over base.yaml. Selecting this config builds the AWS stub providers: they satisfy
+# every interface and are constructed normally, but raise NotImplementedError loudly the moment a
+# model/STT/storage call is made. "Going live" = fill the provider bodies + supply real creds; no
+# agent-code or config-shape change. Placeholder model IDs and pricing below are SHAPE-ONLY and
+# MUST be replaced (and validated) before any live run.
+
+provider: bedrock
+
+llm:
+  provider: bedrock
+  region: us-east-1
+  # Placeholder vendor model IDs — replace with the real Bedrock model IDs at go-live.
+  tier_models:
+    cheap:  bedrock/anthropic.claude-3-5-haiku-v1:0
+    strong: bedrock/anthropic.claude-3-5-sonnet-v2:0
+
+cost:
+  is_mock: false
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  # Placeholder pricing — fail-closed at go-live until replaced with real Bedrock rates.
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  ceiling_inr: 50.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+
+object_storage:
+  provider: bedrock          # → Amazon S3 stub (BedrockObjectStorage)
+  bucket: REPLACE_ME_AT_GO_LIVE
+  prefix: blog-agent/v1/
+
+transcription:
+  provider: bedrock          # → Amazon Transcribe stub
+  language: en-US
+
+# Cloud-agnostic seams — identical across clouds; not stubbed.
+secret_store:
+  provider: env
+telemetry:
+  provider: stdout

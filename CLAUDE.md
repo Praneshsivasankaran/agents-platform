@@ -1,0 +1,64 @@
+# agents-platform — project context for Claude Code
+
+Cloud-agnostic AI agent platform (~40 reusable agents). **Agent 01 — Blog Writing Agent**
+(`agents/agent-01-blog-writer/`) is the **golden/reference agent**: it proves the shared
+scaffold, provider abstraction, model routing, typed I/O, cost tracking, evals, observability,
+and security posture the other agents copy.
+
+## Phase
+Final constraint hardening is complete: schema validation and offline mock generation share
+normalized bounds; impossible or unsupported constraints fail before provider calls.
+Code phase (Spiral Cycle 3), **increment 8** (`new-agent` scaffold CLI — final code step; hardened after Codex review):
+- Increment 8 (complete, offline-verified 2026-06-11, **1417 offline tests**): `new-agent` scaffold generator at `packages/cli/new_agent.py` (`PYTHONPATH=packages python -m cli.new_agent --number NN --slug x-y --title "..." [--with-media]`). Stamps a runnable, cloud-neutral skeleton mirroring Agent 01's layout AND its load-bearing guarantees: `agent/{state,schemas,graph,nodes(intake→process→finalize),prompts}`, `providers/`, `config/{base,gcp,bedrock,azure}.yaml`, `tests/{unit,integration,evals}`, AGENT_SPEC/DESIGN/Dockerfile/README. Codex rejected the first cut; the final hardened pass makes every generated agent: (1) ENFORCE the ₹50 ceiling pre-call (estimate_prompt_tokens + authorize_call, pre-call reject → stopped_cost_ceiling) and post-call (graph guard); (2) PRESERVE incurred cost on provider, post-response, telemetry span-exit, and compound provider-failure-plus-span-exit failures (generated BillableNodeError; guard appends cost; safe_finalize preserves the ledger, not ₹0); (3) neutralize delimiter-breakout injection in `wrap_untrusted`. Generator validates title/description, generates atomically, removes `--force`, restricts 02–40, and protects Agent 01. Text-only output has no ffmpeg/transcription stanza; `--with-media` adds both. Tests prove the generated agent compiles, passes the guard, and inherits the hardened behaviors. The ADR-0004 gate now uses an independent reusable manifest and checks both generator-only and reference-only drift; Agent 01 specializations must be explicitly classified. Factory injection preserves explicitly supplied dependencies even when falsey. All code-phase increments (1–8) are offline-complete; remaining work is the credentialed live-smoke merge gates for Increments 5+6.
+- Increment 7 (complete, offline-verified 2026-06-11, 1357 offline tests): AWS (Bedrock LLM / Transcribe / S3) and Azure (OpenAI / AI Speech / Blob) interface-complete stubs in `packages/core/providers/{bedrock,azure}/`. Each subclasses its `core.interfaces` ABC, is instantiable (constructor never raises), and raises a loud `NotImplementedError` (via shared `providers/_not_wired.py`) only when a method is CALLED — never a silent pass, never a cloud-SDK import. Factory now RETURNS these stub instances for `provider in {bedrock,aws,azure}` (was: raise at selection) so config-only swap is testable today; `secret_store`/`telemetry` stay cloud-agnostic (env/stdout) and are not stubbed. New `config/bedrock.yaml` + `config/azure.yaml` mirror `gcp.yaml`'s shape (placeholder models/pricing, fail-closed at go-live). Tests: `packages/core/tests/test_provider_stubs.py` (ABC/instantiable/loud-failure/factory-selection/no-SDK-import) + `tests/unit/test_cloud_overlay_config.py` (base+overlay deep-merge → factory selects stubs across all 3 seams). Updated the superseded `test_factory_cloud_not_wired` to the new contract. Next: Increment 8 = extract `new-agent` CLI from Agent 01.
+- Increment 3 (eleventh repair pass): full Agent 01 text-path spine implemented — LangGraph nodes, cost gate (₹50 ceiling enforced pre-call with prompt-token counting + input/fixed cost reserves), quality loop, and offline mock CI suite.
+- Increment 4 (complete, approved): agent-agnostic offline eval harness (`packages/evals/`) with 7-archetype Agent 01 eval dataset (`tests/evals/`). Gates: injection=100%, schema-valid=100%, pass-rate≥80%, per-run cost<₹50, avg cost≤₹25. See `agents/agent-01-blog-writer/DESIGN.md`.
+- Increment 4 repair pass (complete): 5 additional issues fixed — harness made genuinely agent-agnostic (archetype/check policy moved to thresholds.yaml via required_checks_all/required_checks_by_archetype/injection_archetypes), checkpoint-safe immutability replaced MappingProxyType with FrozenJsonDict from core, non-vacuous injection/originality checks (fail when canary not observed), fail-closed FX config extraction (no hardcoded fallback), documentation updated.
+- Increment 6 (under Codex repair/review): voice/video transcription input path. Real GCP STT uses configured non-zero provider-native cost, validates the actual bounded normalized PCM WAV before the outbound call, and preserves conservative cost on billable failures. Audio above the 55-second synchronous threshold uses transient GCS-backed long-running recognition and deletes the object afterward. The GCP overlay caps media at 15 minutes, with a configured worst-case STT estimate of about Rs30 under the hard Rs50 run ceiling. Media transcripts are the review source for voice/video. Extracted local temp audio is deleted after transcription. Offline gates cover mocks and stubbed GCP behavior; credentialed Vertex and GCP STT smoke verification remains a merge requirement.
+- Increment 5 (final repair pass): GCP/Vertex AI wired via LiteLLM. Corrected Gemini 2.5 Flash pricing to official rates ($0.30/$2.50 per 1M in/out). Fully fail-closed usage extraction (_extract_tokens rejects None/bool/float/negative/zero-prompt). Structured output uses the LiteLLM documented form: `response_format` = the Pydantic model itself (LiteLLM translates to the provider-specific Vertex/Gemini format); no schema text injected into messages. Live smoke is a genuine merge-queue gate (merge_group event). Smoke assertions strengthened. Constructor validates all tiers, blank location, and fallback pricing coverage. `BillableProviderError` (core.interfaces.errors) preserves cost when a provider call succeeds/may-have-billed but post-call processing fails; it carries ONLY an allowlisted, content-free `category` string (from `BILLABLE_FAILURE_CATEGORIES`) + `Usage` — never an exception object, class name, or raw message. Raise sites construct-in-except then raise-outside (no `raise ... from exc`, never raise inside the except suite) so `__cause__`/`__context__` are both `None` and no provider content can leak; all 5 LLM nodes convert to `BillableNodeError` using only `bpe.category` + usage-derived stage cost. All 5 LLM nodes pass `_authorized_prompt_tokens` so conservative usage uses the real authorized estimate; the conservative fallback also accounts for response-schema overhead (passes `response_schema` to `estimate_prompt_tokens`) and fails closed (raises) when estimation is impossible rather than using a tiny floor. Structured-output contract fully hardened: `assert_deeply_immutable()` enforces all four required config settings (frozen, extra, allow_inf_nan, validate_default) with exact comparisons (`is True`/`is False`); non-finite float values and private-attribute schemas rejected at runtime. `default_factory` allowlist restricted to exact built-in `tuple`; all other factories (lambdas, `functools.partial`, callable objects, model constructors) rejected pre-call. `_check_field_default()` performs a full deep-immutability walk. Contract-parity parametrized matrix covers every invalid schema against all three pre-call boundaries with `assert_not_called()`; runtime-backstop test proves after-mode validators producing mutable output are caught by `assert_deeply_immutable`. Additional hardening: `@computed_field`, `@model_serializer`, `@field_serializer`, and `model_post_init` overrides rejected at both pre-call and runtime (computed fields can produce mutable data; custom serializers can leak mutable/untrusted serialized output; model_post_init can inject undeclared instance state via `object.__setattr__`). `Literal` member validation hardened in `_check_annotation` (via `_check_literal_member`) — only scalar str/bytes/bool/int/finite-float/None permitted; non-finite floats, arbitrary objects, AND Enum members rejected pre-call. Enum members are rejected everywhere (`_check_literal_member`, `_check_field_default`, `assert_deeply_immutable`) because they are not deeply immutable — a member can hold a mutable value (e.g. a list) or accept an injected mutable attribute after construction; the Enum check fires BEFORE the scalar check so str/int-subclass Enums (which are `isinstance` of str/int) are still caught. Required-recursive cycle detection rewritten as proper termination analysis (`_annotation_terminates`/`_model_terminates`/`_assert_constructible`, plus public `annotation_can_terminate`): a schema is rejected iff it has NO finite construction path. Correctly handles `tuple[Self]` (reject — fixed tuple needs a Self), `tuple[Self, ...]` (accept — empty tuple terminates), `tuple[Self, ...] = Field(min_length>=1)` (reject — termination analysis reads the field's `min_length` constraint; ≥1 element required so it cannot terminate), `Self | str` / `Self | int` / `Self | None` (accept), `Self | OtherImpossible` (reject), and mutual cycles A→B→A (reject) vs A→B→Optional[A] (accept). `MockLLMProvider` uses the public `annotation_can_terminate` to deterministically select a terminating union branch (prefers None, else first terminating branch) and a cycle guard that fails clearly instead of `RecursionError`. Runtime backstop adds: `__dict__` key comparison against `model_fields` (rejects hidden state), `__pydantic_private__` non-empty check (belt-and-suspenders), computed/serializer/post-init type-level checks.
+
+Framework decision recorded (ADR-0001). The independent Codex implementation review is
+**pending** — it does **not** block scaffold setup but **must pass before final
+implementation/merge**, and is **not** claimed complete.
+
+## Hard rules (non-negotiable — DESIGN §4)
+- Agent logic (`agents/*/agent/`) imports ONLY `core` abstractions — **never** `google.cloud`,
+  `google.genai`/`google.generativeai`, `google.auth`/`google.oauth2`, `googleapiclient`,
+  `vertexai`, `boto3`, `botocore`, `azure`, any STT SDK, or a direct model SDK
+  (`litellm`/`openai`/`anthropic`/`cohere`). Enforced in CI by `core.checks.no_cloud_sdk`
+  (scoped to `agents/*/agent/`).
+- **Dependency boundary:** cloud SDKs are **permitted only** inside
+  `packages/core/providers/{gcp,bedrock,azure}/` (the provider-implementation layer). They are
+  forbidden in `agents/*/agent/`; the agent's thin `providers/` wiring imports only `core` factories.
+  The import guard scans `agents/*/agent/` and must **not** scan `packages/core/providers/*`.
+- Model calls → `LLMProvider` (LiteLLM under the hood). Transcription → `TranscriptionProvider`.
+  Storage → `ObjectStorage`. Secrets → `SecretStore`. Observability → `Telemetry`.
+- `_authorized_prompt_tokens` is a reserved internal param key in `LLMProvider.respond()` params dict.
+  Nodes must pass it with the `estimate_prompt_tokens()` result so conservative usage fallback uses the
+  real authorized estimate. It is stripped before forwarding to litellm and must be a positive non-boolean int.
+- Cloud/provider chosen by **config**, not code. GCP/Vertex wired first; AWS Bedrock + Azure stubbed
+  (placeholder dirs today; interface-complete stubs land later).
+- v1 is **draft-only**: no publishing, CMS, social, web search, scraping, visual-video, or vector retrieval.
+- Cost ceiling **₹50/blog**; quality pass = score ≥ 80/100 AND no hard-fail.
+
+## Layout
+- `packages/core/` — shared provider interfaces + offline mock providers + no-cloud-SDK import guard + CI.
+- `packages/evals/` — shared eval harness (later); datasets live per-agent in `tests/evals/`.
+- `packages/cli/` — `new-agent` generator, **extracted last** from Agent 01.
+- `agents/agent-01-blog-writer/` — the golden agent (`AGENT_SPEC.md`, `DESIGN.md`).
+- `docs/adr/` — ADR-0001 (framework: LangGraph + LiteLLM + Pydantic), ADR-0003 (TranscriptionProvider), ADR-0004 (scaffold-CLI sequencing).
+
+## Run (dev)
+Interfaces import with **Pydantic + the standard library** (no cloud SDKs). Install deps first
+(`pip install -r requirements.txt`), then smoke-import core + its submodules:
+
+```
+# Windows PowerShell
+$env:PYTHONPATH="packages"; python -c "import core, core.factory, core.cost.meter, core.config.loader, core.media.extract_audio; print(core.__all__)"
+# bash
+PYTHONPATH=packages python -c "import core, core.factory, core.cost.meter, core.config.loader, core.media.extract_audio; print(core.__all__)"
+```
+
+Tests/CI add the agent dir to `PYTHONPATH` and run offline on `base.yaml` (mock provider).
+Reuse source for `packages/core`: the bake-off `common/` under
+`../Project 2 Agents/Framework BakeOff/bakeoff/bakeoff/` (promote + harden).

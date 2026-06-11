@@ -1,0 +1,73 @@
+# GCP / Vertex AI overlay — deep-merges over base.yaml at runtime.
+# Usage: build_graph with this config loaded over base.yaml.
+# Credentials: set GOOGLE_APPLICATION_CREDENTIALS or use workload identity (ADC).
+# Project: set VERTEX_AI_PROJECT environment variable (read via SecretStore).
+
+provider: litellm
+
+llm:
+  provider: litellm
+  # Gemini 2.0 Flash Lite and Flash 001 retired June 1 2026; replaced with Gemini 2.5 models.
+  tier_models:
+    cheap:  vertex_ai/gemini-2.5-flash
+    strong: vertex_ai/gemini-2.5-pro
+  # Issue 4: Vertex project resolved from env via SecretStore
+  vertex_project_secret: VERTEX_AI_PROJECT    # resolved via SecretStore
+  vertex_location: us-central1                # default Vertex AI region
+
+cost:
+  is_mock: false
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  # Formula: $(price/1M tokens) x INR(FX) / 1,000,000 = INR per token
+  # Source: Google Vertex AI pricing, June 2026 (standard tier, pessimistic rates)
+  # https://cloud.google.com/vertex-ai/generative-ai/docs/pricing
+  # Gemini 2.5 Flash: $0.30/1M input, $2.50/1M output (official standard pricing)
+  # Gemini 2.5 Pro:   $1.25/1M input, $10.00/1M output (<=200k context tier)
+  # Model lifecycle: verify configured model IDs are not retired before every release and
+  # live-smoke run. Check: https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions
+  input_cost_per_token_inr:
+    cheap:  0.0000249    # $0.30  / 1_000_000 x 83
+    strong: 0.0001037    # $1.25  / 1_000_000 x 83
+  output_cost_per_token_inr:
+    cheap:  0.0002075    # $2.50  / 1_000_000 x 83
+    strong: 0.0008300    # $10.00 / 1_000_000 x 83
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  ceiling_inr: 50.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  estimated_stage_cost_inr:
+    transcribe: 30.0
+
+object_storage:
+  provider: gcp
+  # Issue 5: Bucket name via SecretStore key — never hardcode bucket names
+  # Set GCS_BLOG_BUCKET env var; SecretStore reads it
+  bucket_secret_key: GCS_BLOG_BUCKET
+  prefix: blog-agent/v1/
+
+transcription:
+  provider: gcp
+  language: en-US
+  model: latest_long
+  sample_rate_hertz: 16000
+  audio_channel_count: 1
+  timestamps: true
+  diarization: false
+  normalize_voice: true
+  # Short audio uses synchronous recognition. Longer audio is uploaded transiently
+  # through GCSObjectStorage for long-running recognition and deleted afterward.
+  sync_max_duration_s: 55
+  long_running_timeout_s: 1800
+  # 15 minutes keeps the configured worst-case STT charge below the Rs50 run ceiling.
+  max_duration_s: 900
+  max_audio_bytes: 524288000
+  provider_currency: USD
+  # Conservative configured billing estimate. Verify against the selected GCP STT
+  # model before every release/live-smoke run; never silently replace with zero.
+  cost_per_second_native: 0.0004
+  billing_increment_seconds: 15

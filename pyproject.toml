@@ -1,0 +1,23 @@
+# Workspace tooling config. Packages are imported via PYTHONPATH (see CLAUDE.md / README),
+# matching the bake-off layout; this file is not an installable distribution yet.
+
+[project]
+name = "agents-platform"
+version = "0.0.0"
+description = "Cloud-agnostic AI agent platform — Agent 01 (Blog Writer) is the golden/reference agent."
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["packages", "agents"]
+pythonpath = ["packages", "agents/agent-01-blog-writer"]
+markers = ["smoke: credentialed live-provider smoke tests"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+namespace_packages = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100

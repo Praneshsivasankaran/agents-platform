@@ -1,0 +1,51 @@
+# Azure overlay — INTERFACE-COMPLETE STUB (v1; not wired).
+# Deep-merges over base.yaml. Selecting this config builds the Azure stub providers: they satisfy
+# every interface and are constructed normally, but raise NotImplementedError loudly the moment a
+# model/STT/storage call is made. "Going live" = fill the provider bodies + supply real creds; no
+# agent-code or config-shape change. Placeholder deployment IDs and pricing below are SHAPE-ONLY
+# and MUST be replaced (and validated) before any live run.
+
+provider: azure
+
+llm:
+  provider: azure
+  azure_region: eastus
+  # Placeholder Azure OpenAI deployment IDs — replace at go-live.
+  tier_models:
+    cheap:  azure/gpt-4o-mini
+    strong: azure/gpt-4o
+
+cost:
+  is_mock: false
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  # Placeholder pricing — fail-closed at go-live until replaced with real Azure rates.
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  ceiling_inr: 50.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+
+object_storage:
+  provider: azure            # → Azure Blob Storage stub (AzureObjectStorage)
+  bucket: REPLACE_ME_AT_GO_LIVE
+  prefix: blog-agent/v1/
+
+transcription:
+  provider: azure            # → Azure AI Speech stub
+  language: en-US
+
+# Cloud-agnostic seams — identical across clouds; not stubbed.
+secret_store:
+  provider: env
+telemetry:
+  provider: stdout

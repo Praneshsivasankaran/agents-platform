@@ -1,0 +1,16 @@
+# Platform dependency floors — MINIMUM versions (matching the ADR-0001 bake-off), NOT exact pins.
+# Exact version pinning + a lockfile is a Debug/Harden task; these >= ranges are intentional for now.
+#
+# Cloud-SDK boundary (enforced by core.checks.no_cloud_sdk, scoped to agents/*/agent/):
+#   - agents/*/agent/ must NEVER import a cloud SDK.
+#   - packages/core/{interfaces,cost,config,media} stay cloud-neutral (these deps + the stdlib only).
+#   - packages/core/providers/{gcp,bedrock,azure} MAY import provider SDKs once those impls are filled in.
+langgraph>=0.2
+langchain-core>=0.3
+pydantic>=2
+pyyaml>=6
+litellm>=1.50  # minimum version floor; pin exact version with lockfile for reproducible builds
+google-cloud-storage>=2.0
+google-cloud-aiplatform>=1.60
+google-cloud-speech>=2.0
+pytest>=8

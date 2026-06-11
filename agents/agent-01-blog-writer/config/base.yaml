@@ -1,0 +1,225 @@
+# Agent 01 — Blog Writing Agent · base configuration (mock provider / offline CI)
+#
+# This file is the default; cloud overlays (gcp.yaml, bedrock.yaml, azure.yaml) merge on
+# top for non-mock runs.  Tests and CI always use this file so no credentials are needed.
+#
+# DESIGN §4, §8, §10: the agent selects providers, tiers, and costs from config alone —
+# no vendor name may be hard-coded in agent/ logic.
+
+# ---------------------------------------------------------------------------
+# Provider selection — "mock" means the offline MockLLMProvider (no keys needed)
+# ---------------------------------------------------------------------------
+provider: mock
+
+# ---------------------------------------------------------------------------
+# Service identity (used as the telemetry service name)
+# ---------------------------------------------------------------------------
+service: agent-01-blog-writer
+
+# ---------------------------------------------------------------------------
+# LLM tier → model resolution
+# Real model IDs are only meaningful for non-mock providers (gcp.yaml etc.).
+# The mock ignores these but they must be present so config-loading code is uniform.
+# ---------------------------------------------------------------------------
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+
+# ---------------------------------------------------------------------------
+# Cost accounting (DESIGN §8)
+#
+# ceiling_inr:  Hard spend limit per blog run.  The cost gate fires when
+#               current_total + estimated_next_stage > ceiling_inr.
+#
+# fx_rates:     Provider-native currency → INR conversion.  USD is the only
+#               currency used by LiteLLM/Vertex in production; add others as
+#               needed.  The mock uses synthetic=True / cost_native=0 so these
+#               rates are irrelevant in offline CI but must parse correctly.
+#
+# estimated_stage_cost_inr:
+#               Conservative fixed INR estimates used by the pre-draft cost gate
+#               (v1 — actual cost is still accumulated after each real call).
+#               Set slightly high so the gate is safe-to-fail when uncertain.
+# ---------------------------------------------------------------------------
+cost:
+  ceiling_inr: 50.0
+  # Seventh repair: explicit mock flag.  authorize_call skips the fail-closed
+  # zero-pricing check when is_mock=true.  Cloud overlays (gcp.yaml etc.) must
+  # set is_mock=false (or omit it — false is the safe default) and supply real
+  # output_cost_per_token_inr values.
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+    EUR: 90.0
+  # Conservative fixed INR estimates for every billable stage.
+  # estimate_for_stage raises ValueError when a stage name is absent (fail-closed).
+  # Seventh repair: added cheap-tier node estimates so authorize_call can include
+  # downstream reserves for all mandatory pipeline stages.
+  estimated_stage_cost_inr:
+    normalize: 0.3
+    extract_ideas: 0.3
+    plan: 0.5
+    draft: 12.0
+    review: 6.0
+    # Transcription estimate for voice/video paths. The mock uses zero-cost synthetic
+    # Usage, so this is a headroom reservation only (fail-closed if key is missing).
+    transcribe: 5.0
+    # Note: revision cycles reuse the "draft" and "review" estimates above.
+  # Worst-case output token cost used to derive max_tokens before each billable call.
+  # Set to 0 for mock (no per-token cost); cloud overlays set real values, e.g.:
+  #   strong: 0.00058   # Gemini 1.5 Pro output tokens at ₹0.058 per 100 tokens
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  # Eleventh repair: flat per-call cost in INR for providers that charge a request
+  # fee independent of token counts (e.g. context-window or API-call surcharges).
+  # Set to 0 for mock; cloud overlays set real values when applicable.
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  # Ninth repair: per-input-token cost in INR (used by authorize_call to compute an
+  # input-token reserve so input charges cannot exceed the per-call budget even with a
+  # tight max_tokens cap).  Set to 0 for mock; cloud overlays set real values, e.g.:
+  #   strong: 0.000145  # Gemini 1.5 Pro input tokens at ₹0.0145 per 100 tokens
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  # Ninth repair: conservative upper-bound on prompt tokens for each tier.  Used as
+  # prompt_tokens_estimate in authorize_call to size the input-token reserve.  Set
+  # conservatively high; over-estimation is safe (shrinks output budget) while
+  # under-estimation can allow input charges to exceed the per-call budget.
+  # Final repair: values increased to match the new byte-per-token estimation.
+  # estimate_prompt_tokens now counts 1 token per UTF-8 byte (guaranteed conservative).
+  # These values are BYTE limits, not traditional "token" limits.  A typical English
+  # blog-writing prompt is 500–6000 bytes; 16384/32768 provides ample headroom while
+  # still blocking truly oversized (and likely adversarially-crafted) inputs.
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+
+# ---------------------------------------------------------------------------
+# Graph control (DESIGN §1.3)
+# ---------------------------------------------------------------------------
+graph:
+  max_revision_cycles: 2
+
+# ---------------------------------------------------------------------------
+# Telemetry
+# ---------------------------------------------------------------------------
+telemetry:
+  provider: stdout
+  service: agent-01-blog-writer
+
+  # Node event labels emitted to structured logs (DESIGN §11).
+  # Bare node names are used as span names (tel.span("intake") etc.) and must be registered.
+  # Dotted names are used as log event codes (tel.log("intake.accepted") etc.).
+  extra_labels:
+    # Bare node names — used as tel.span() names; must be registered labels.
+    - intake
+    - extract_audio
+    - transcribe
+    - normalize
+    - extract_ideas
+    - plan
+    - cost_gate
+    - draft
+    - review
+    - finalize
+    # Dotted event codes — used as tel.log() event strings.
+    - intake.accepted
+    - intake.invalid_input
+    - intake.unsupported_input_type
+    - intake.writing_prefs_unsupported
+    - intake.invalid_media_ref
+    - intake.unsupported_media_format
+    - extract_audio.complete
+    - extract_audio.error
+    - extract_audio.invalid_ref
+    - transcribe.complete
+    - transcribe.error
+    - transcribe.missing_audio_ref
+    - transcribe.missing_raw_input
+    - normalize.complete
+    - extract_ideas.complete
+    - plan.complete
+    - draft.complete
+    - review.complete
+    - cost_gate.checked
+    - finalize.complete
+    - finalize.enrich.derived
+    # Routing and error events (Item 5)
+    - route.decision
+    - node.error
+
+  # Dimension keys and their finite-enum values for attribute redaction (DESIGN §11).
+  # The factory reads this as dict[str, list] — keys become registered attr_keys;
+  # values are the allowed string values for each key in tel.log()/tel.span() attrs.
+  dimensions:
+    node: [intake, extract_audio, transcribe, normalize, extract_ideas, plan, cost_gate, draft, review, finalize]
+    tier: [cheap, strong, stt]
+    provider: [mock, litellm, gcp, bedrock, azure]
+    status: [pass, needs_human, stopped_cost_ceiling, error]
+    # Route decision values (Item 5) — used in route.decision events.
+    decision: [ok, error, cost_ceiling, usable_false, pass, revise, needs_human, terminal_hard_fail, retriable_hard_fail]
+    # Routing targets for route.decision events.
+    target: [intake, extract_audio, transcribe, normalize, extract_ideas, plan, cost_gate, draft, review, finalize, ceiling_exceeded]
+    # input_type values for intake events.
+    input_type: [text, voice, video, unknown]
+
+  # Attribute keys included on every span/log record for filtering/correlation.
+  attr_keys:
+    - service      # always "agent-01-blog-writer"
+    - run_id       # unique per graph.invoke() call (set by Telemetry.start_run)
+    - node         # current node name
+
+  # Additional metric names beyond the standard stage.cost_inr / total.cost_inr.
+  extra_metric_names:
+    - stage.cost_inr          # per-node INR spend
+    - total.cost_inr          # running total tracked at cost_gate and finalize
+    # Quality metrics emitted by the review node after each evaluation (Item 5).
+    - quality.overall_score
+    - quality.structure_flow
+    - quality.clarity_readability
+    - quality.idea_coverage
+    - quality.originality
+    - quality.tone_audience_fit
+    - quality.seo_usefulness
+    - quality.factual_safety_sources
+    - quality.grammar_polish
+    - quality.engagement_value
+    # Revision lifecycle metric emitted by the draft node (Item 5).
+    - revision.count
+    # Transcription metrics (Increment 6).
+    - transcribe.duration_s
+    - transcribe.cost_inr
+
+# ---------------------------------------------------------------------------
+# Object storage (mock for offline CI)
+# ---------------------------------------------------------------------------
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: blog-agent/
+
+# ---------------------------------------------------------------------------
+# Secret store (final repair Item 7: renamed from "secrets:" → "secret_store:"
+# to match the core factory's config key)
+# ---------------------------------------------------------------------------
+secret_store:
+  provider: env
+
+# ---------------------------------------------------------------------------
+# Transcription (Increment 6 — ADR-0003)
+# "mock" means the offline MockTranscriptionProvider (no keys needed).
+# Cloud overlays set provider: gcp for GCP Cloud Speech.
+# ---------------------------------------------------------------------------
+transcription:
+  provider: mock
+  language: en
+  timestamps: true
+  diarization: false
+  normalize_voice: false
+  max_duration_s: 7200
