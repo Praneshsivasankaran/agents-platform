@@ -1,0 +1,75 @@
+# Report Writing Agent · base configuration (mock provider / offline CI).
+#
+# Tests and CI always use this file, so no credentials are needed. Cloud overlays
+# (gcp.yaml, bedrock.yaml, azure.yaml) deep-merge on top for non-mock runs.
+# The agent selects providers, tiers, and costs from config alone — never hard-coded in agent/.
+
+provider: mock
+service: agent-02-report-writer
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+
+cost:
+  ceiling_inr: 50.0          # FIXED platform ceiling — do not raise.
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  # Conservative per-stage INR estimates for the pre-call budget gate (fail-closed if missing).
+  estimated_stage_cost_inr:
+    process: 12.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+
+graph:
+  max_revision_cycles: 2
+
+telemetry:
+  provider: stdout
+  service: agent-02-report-writer
+  extra_labels:
+    - intake
+    - process
+    - finalize
+    - intake.accepted
+    - intake.invalid_input
+    - process.complete
+    - finalize.complete
+    - route.decision
+    - node.error
+  dimensions:
+    node: [intake, process, finalize]
+    tier: [cheap, strong, stt]
+    provider: [mock, litellm, gcp, bedrock, azure]
+    status: [pass, needs_human, stopped_cost_ceiling, error]
+  attr_keys:
+    - service
+    - run_id
+    - node
+  extra_metric_names:
+    - stage.cost_inr
+    - total.cost_inr
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: report-writer/
+
+secret_store:
+  provider: env
+
+

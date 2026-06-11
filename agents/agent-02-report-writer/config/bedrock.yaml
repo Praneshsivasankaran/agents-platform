@@ -1,0 +1,40 @@
+# AWS overlay for Report Writing Agent — INTERFACE-COMPLETE STUB (not wired in v1; raises loudly on use).
+# Deep-merges over base.yaml. Mirrors agents/agent-01-blog-writer/config/bedrock.yaml. Going live
+# = fill the provider bodies + supply real creds; no agent-code or config-shape change. Placeholder
+# model IDs and zero pricing below are SHAPE-ONLY and fail-closed until replaced.
+
+provider: bedrock
+
+llm:
+  provider: bedrock
+  region: us-east-1
+  tier_models:
+    cheap:  bedrock/anthropic.claude-3-5-haiku-v1:0
+    strong: bedrock/anthropic.claude-3-5-sonnet-v2:0
+
+cost:
+  is_mock: false
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  ceiling_inr: 50.0
+
+object_storage:
+  provider: bedrock          # -> Amazon S3 stub
+  bucket: REPLACE_ME_AT_GO_LIVE
+  prefix: report-writer/v1/
+
+transcription:
+  provider: bedrock          # -> Amazon Transcribe stub
+  language: en-US
+
+secret_store:
+  provider: env
+telemetry:
+  provider: stdout

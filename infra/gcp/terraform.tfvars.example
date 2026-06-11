@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored (contains your IDs).
+project_id        = "agents-platform-1212"
+region            = "us-central1"
+github_repository = "REPLACE_ME_OWNER/agents-platform"
+stt_bucket_name   = "agents-platform-1212-agents-platform-stt-smoke"
+# service_account_id  = "agents-platform-ci"   # default is fine
+# stt_object_ttl_days = 1                        # default is fine (transient)

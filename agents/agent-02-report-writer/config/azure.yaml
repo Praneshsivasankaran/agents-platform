@@ -1,0 +1,39 @@
+# Azure overlay for Report Writing Agent — INTERFACE-COMPLETE STUB (not wired in v1; raises loudly on use).
+# Deep-merges over base.yaml. Mirrors agents/agent-01-blog-writer/config/azure.yaml. Placeholder
+# deployment IDs and zero pricing below are SHAPE-ONLY and fail-closed until replaced.
+
+provider: azure
+
+llm:
+  provider: azure
+  azure_region: eastus
+  tier_models:
+    cheap:  azure/gpt-4o-mini
+    strong: azure/gpt-4o
+
+cost:
+  is_mock: false
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  ceiling_inr: 50.0
+
+object_storage:
+  provider: azure            # -> Azure Blob Storage stub
+  bucket: REPLACE_ME_AT_GO_LIVE
+  prefix: report-writer/v1/
+
+transcription:
+  provider: azure            # -> Azure AI Speech stub
+  language: en-US
+
+secret_store:
+  provider: env
+telemetry:
+  provider: stdout

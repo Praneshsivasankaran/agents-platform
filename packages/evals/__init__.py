@@ -4,10 +4,12 @@ from .harness import (
     load_dataset, load_thresholds, evaluate, assert_eval_report,
     _deep_freeze, _deep_unfreeze,
 )
+from .benchmark import BenchmarkResult, benchmark, percentile
 
 __all__ = [
     "EvalCase", "EvalDataset", "EvalThresholds",
     "EvalObservation", "EvalReport",
     "load_dataset", "load_thresholds", "evaluate", "assert_eval_report",
     "_deep_freeze", "_deep_unfreeze",
+    "BenchmarkResult", "benchmark", "percentile",
 ]

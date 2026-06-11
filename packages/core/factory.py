@@ -177,6 +177,12 @@ def get_secret_store(cfg: dict[str, Any]) -> SecretStore:
         from .providers.mock import EnvSecretStore
 
         return EnvSecretStore()
+    if provider in ("gcp", "gcp_secret_manager", "secretmanager"):
+        # Production credential resolution via GCP Secret Manager. The provider's SDK import is
+        # lazy (deferred to first get()), so selecting/constructing it here stays offline-safe.
+        from .providers.gcp.secret_manager import GCPSecretManagerSecretStore
+
+        return GCPSecretManagerSecretStore(cfg)
     if provider in _NOT_WIRED:
         raise NotImplementedError(f"secret_store provider '{provider}' is a v1 placeholder (not wired yet)")
     raise ValueError(f"unknown secret_store.provider: {provider!r}")

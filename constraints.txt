@@ -1,0 +1,27 @@
+# Dependency constraints — REPRODUCIBLE pin of the DIRECT platform dependencies.
+#
+# Purpose (Cycle 4, item 2): requirements.txt carries intentional version FLOORS (>=) so the
+# platform tracks upstream. This file pins EXACT versions known-good — these are the versions
+# under which the credentialed live GCP smoke gate passed (6/6) and the 1419-test offline suite
+# is green. Use it for reproducible installs without changing the floors:
+#
+#     pip install -r requirements.txt -c constraints.txt
+#
+# CI is intentionally NOT switched to this file yet (it still installs the floors, exercising the
+# newest resolvable versions). Promote `-c constraints.txt` into CI when the team wants a frozen
+# build; until then this file documents the verified baseline and powers reproducible local repro.
+#
+# These pin only the DIRECT dependencies. For a FULL transitive lock, regenerate from a clean
+# venv (see docs/DEPENDENCY-MANAGEMENT.md):
+#     pip install -r requirements.txt && pip freeze > constraints.lock.txt
+#
+# Verified baseline captured: 2026-06-11 (Python 3.11 local; CI uses 3.12 for offline / 3.11 live).
+langgraph==1.2.4
+langchain-core==1.4.1
+pydantic==2.12.5
+pyyaml==6.0.3
+litellm==1.88.1
+google-cloud-storage==3.11.0
+google-cloud-aiplatform==1.157.0
+google-cloud-speech==2.40.0
+pytest==9.0.3

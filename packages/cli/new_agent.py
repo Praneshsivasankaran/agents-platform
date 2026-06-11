@@ -116,7 +116,14 @@ AGENT_01_SPECIALIZATION_FILES = frozenset({
     "tests/evals/test_eval.py",
     "tests/evals/test_trust_boundary.py",
     "tests/evals/thresholds.yaml",
+    # Cycle 4 — adversarial eval suite (separate from the v1 merge gate).
+    "tests/evals/cases.adversarial.v1.json",
+    "tests/evals/thresholds.adversarial.yaml",
+    "tests/evals/test_eval_adversarial.py",
     "tests/integration/test_graph_media.py",
+    # Cycle 4 — offline latency benchmark + end-to-end privacy/retention contract.
+    "tests/integration/test_latency_benchmark.py",
+    "tests/integration/test_privacy_retention.py",
     "tests/smoke/__init__.py",
     "tests/smoke/test_smoke_gcp.py",
     "tests/unit/test_budget_authorization.py",
