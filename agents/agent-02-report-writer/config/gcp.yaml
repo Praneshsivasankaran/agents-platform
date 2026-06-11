@@ -1,0 +1,37 @@
+# GCP / Vertex AI overlay for Report Writing Agent — PLACEHOLDER (fill before any live run).
+# Deep-merges over base.yaml. Mirrors agents/agent-01-blog-writer/config/gcp.yaml; replace the
+# placeholder model IDs and pricing with validated values before going live.
+
+provider: litellm
+
+llm:
+  provider: litellm
+  tier_models:
+    cheap:  vertex_ai/gemini-2.5-flash
+    strong: vertex_ai/gemini-2.5-pro
+  vertex_project_secret: VERTEX_AI_PROJECT
+  vertex_location: us-central1
+
+cost:
+  is_mock: false
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  # Placeholder pricing — fail-closed until replaced with official Vertex rates.
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  ceiling_inr: 50.0
+
+object_storage:
+  provider: gcp
+  bucket_secret_key: GCS_BUCKET
+  prefix: report-writer/v1/
+
+secret_store:
+  provider: env
+telemetry:
+  provider: stdout

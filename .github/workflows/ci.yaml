@@ -84,6 +84,14 @@ jobs:
       - name: new-agent scaffold generator tests
         run: PYTHONPATH=packages python -m pytest packages/cli/tests -q
 
+      # 9) Agent 02 generated scaffold tests (Cycle 4). Agent 02 is scaffold-only (no business
+      #    logic yet); this keeps its generated spine green on mocks so it does not rot. The
+      #    no-cloud-SDK guard (step 1) already auto-discovers and scans agents/agent-02/agent.
+      - name: Agent 02 generated scaffold tests (offline/mock)
+        run: |
+          PYTHONPATH=packages:agents/agent-02-report-writer \
+          python -m pytest agents/agent-02-report-writer/tests -q
+
   # Live smoke gate — genuine required pre-merge gate.
   # Runs only in the merge queue (trusted, PR-approved code) or on direct push to main.
   # Fork PRs never have secrets; they cannot reach this job (no silent skip via condition).
