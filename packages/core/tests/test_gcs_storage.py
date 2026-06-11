@@ -126,3 +126,45 @@ class TestGCSObjectStorage:
         from core.providers.gcp.storage import GCSObjectStorage
         s = GCSObjectStorage(_CFG)
         assert s._client is None
+
+    def test_secret_bucket_wins_over_inherited_direct_bucket(self):
+        from core.providers.gcp.storage import GCSObjectStorage
+
+        secrets = MagicMock()
+        secrets.get.side_effect = lambda key: {
+            "GCS_BLOG_BUCKET": "real-cloud-bucket",
+            "VERTEX_AI_PROJECT": "real-project",
+        }[key]
+        cfg = {
+            "object_storage": {
+                "provider": "gcp",
+                "bucket": "mock-bucket",
+                "bucket_secret_key": "GCS_BLOG_BUCKET",
+                "project_secret_key": "VERTEX_AI_PROJECT",
+            }
+        }
+
+        storage = GCSObjectStorage(cfg, secret_store=secrets)
+
+        assert storage._bucket_name == "real-cloud-bucket"
+        assert storage._project == "real-project"
+
+    def test_lazy_client_receives_resolved_project(self):
+        from core.providers.gcp.storage import GCSObjectStorage
+
+        secrets = MagicMock()
+        secrets.get.return_value = "configured-project"
+        cfg = {
+            "object_storage": {
+                "provider": "gcp",
+                "bucket": "test-bucket",
+                "project_secret_key": "VERTEX_AI_PROJECT",
+            }
+        }
+        storage = GCSObjectStorage(cfg, secret_store=secrets)
+        fake_client = MagicMock()
+
+        with patch("google.cloud.storage.Client", return_value=fake_client) as client_cls:
+            assert storage._get_client() is fake_client
+
+        client_cls.assert_called_once_with(project="configured-project")

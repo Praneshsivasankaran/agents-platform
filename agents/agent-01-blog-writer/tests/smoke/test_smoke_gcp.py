@@ -163,7 +163,9 @@ def test_smoke_text_response(_cfg):
     result = p.respond(
         [{"role": "user", "content": "Reply with exactly: OK"}],
         tier="cheap",
-        params={"max_tokens": 10},
+        # Gemini 2.5 Flash uses reasoning tokens that count against max_tokens.
+        # 10 tokens was exhausted by thinking with no budget left for output.
+        params={"max_tokens": 128},
     )
     assert result.text, "Expected non-empty text response"
 
@@ -198,7 +200,9 @@ def test_smoke_structured_response(_cfg):
         [{"role": "user", "content": "Respond with a greeting in English."}],
         tier="cheap",
         response_schema=_Greeting,
-        params={"max_tokens": 100},
+        # Gemini 2.5 Flash counts internal reasoning tokens against max_tokens.
+        # Keep enough headroom for both reasoning and the small JSON payload.
+        params={"max_tokens": 256},
     )
     assert result.structured is not None
     assert isinstance(result.structured, _Greeting)

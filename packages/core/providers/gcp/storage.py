@@ -28,9 +28,7 @@ class GCSObjectStorage(ObjectStorage):
         bucket_direct = storage_cfg.get("bucket", "")
         bucket_secret_key = storage_cfg.get("bucket_secret_key", "")
 
-        if bucket_direct:
-            self._bucket_name = bucket_direct
-        elif bucket_secret_key:
+        if bucket_secret_key:
             # Issue 4 Fix C: Require SecretStore — no os.environ fallback.
             if secret_store is None:
                 raise ValueError(
@@ -43,6 +41,8 @@ class GCSObjectStorage(ObjectStorage):
                     f"GCSObjectStorage: SecretStore.get({bucket_secret_key!r}) returned empty"
                 )
             self._bucket_name = val
+        elif bucket_direct:
+            self._bucket_name = bucket_direct
         else:
             raise ValueError(
                 "GCSObjectStorage: cfg.object_storage must have either "
@@ -50,12 +50,30 @@ class GCSObjectStorage(ObjectStorage):
             )
 
         # Lazy import — defer google-cloud-storage import to first use
+        project_direct = storage_cfg.get("project", "")
+        project_secret_key = storage_cfg.get("project_secret_key", "")
+        if project_secret_key:
+            if secret_store is None:
+                raise ValueError(
+                    f"GCSObjectStorage: project_secret_key={project_secret_key!r} requires a SecretStore"
+                )
+            project_value = secret_store.get(project_secret_key)
+            if not project_value:
+                raise ValueError(
+                    f"GCSObjectStorage: SecretStore.get({project_secret_key!r}) returned empty"
+                )
+            self._project = project_value
+        elif project_direct:
+            self._project = project_direct
+        else:
+            self._project = None
+
         self._client = None
 
     def _get_client(self):
         if self._client is None:
             from google.cloud import storage as gcs  # type: ignore[import-untyped]
-            self._client = gcs.Client()
+            self._client = gcs.Client(project=self._project)
         return self._client
 
     def _validate_key(self, key: str) -> None:

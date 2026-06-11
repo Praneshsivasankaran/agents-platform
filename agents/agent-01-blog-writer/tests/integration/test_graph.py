@@ -28,6 +28,8 @@ accumulator reducers work end-to-end, cost telemetry is produced, and every term
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from typing import Any
 
 import pytest
@@ -526,18 +528,30 @@ def test_cost_usage_total_matches_stage_sum():
 # ---------------------------------------------------------------------------
 
 def test_agent_modules_have_no_cloud_sdk_import():
-    """Smoke check: importing the agent package must not pull in any cloud SDK."""
-    import sys
+    """Importing Agent 01 in isolation must not pull in any cloud SDK.
 
-    # These module prefixes are banned inside agent/
-    banned_prefixes = ("google.cloud", "vertexai", "boto3", "botocore", "azure")
-
-    for mod_name in list(sys.modules):
-        for prefix in banned_prefixes:
-            assert not mod_name.startswith(prefix), (
-                f"Cloud SDK module '{mod_name}' was imported transitively through agent/. "
-                "agent/ must remain cloud-neutral (DESIGN §4)."
-            )
+    The full suite legitimately imports provider SDKs in core-provider tests, so
+    inspecting this pytest process would produce order-dependent false positives.
+    """
+    probe = """
+import sys
+banned = ("google.cloud", "vertexai", "boto3", "botocore", "azure")
+before = set(sys.modules)
+import agent.graph
+found = sorted(
+    name for name in set(sys.modules) - before
+    if name.startswith(banned)
+)
+if found:
+    raise SystemExit("cloud SDKs imported through agent: " + ", ".join(found))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", probe],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
 
 
 # ---------------------------------------------------------------------------

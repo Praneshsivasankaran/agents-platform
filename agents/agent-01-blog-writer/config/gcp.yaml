@@ -45,9 +45,11 @@ cost:
 
 object_storage:
   provider: gcp
-  # Issue 5: Bucket name via SecretStore key — never hardcode bucket names
-  # Set GCS_BLOG_BUCKET env var; SecretStore reads it
+  # Explicitly clear base.yaml's mock bucket during deep merge. Real bucket and
+  # project values are resolved through SecretStore; never hardcode them.
+  bucket: null
   bucket_secret_key: GCS_BLOG_BUCKET
+  project_secret_key: VERTEX_AI_PROJECT
   prefix: blog-agent/v1/
 
 transcription:
