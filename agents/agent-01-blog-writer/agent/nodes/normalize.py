@@ -19,14 +19,55 @@ Sixth repair pass (intact):
   greater-than-or-equal (>=) — superseded by authorize_call in this repair.
 """
 from __future__ import annotations
+import re
 from typing import Any
 from core.cost import CostCeilingExceeded, authorize_call, estimate_prompt_tokens, resolve_is_mock, usage_cost_inr
 from core.interfaces import Telemetry
 from core.interfaces.errors import BillableProviderError
 from core.interfaces.llm import LLMProvider
 from ..prompts import build_system, normalize_prompt
-from ..schemas import BillableNodeError, StageCost
+from ..schemas import BillableNodeError, ExtractedIdeas, StageCost
 from ..state import BlogState
+
+
+_COMMAND_ONLY_PREFIX_RE = re.compile(
+    r"^\s*(?:please\s+)?(?:i\s+want\s+(?:you\s+)?to\s+)?"
+    r"(?:write|create|draft|generate|make|prepare|compose)\s+",
+    re.IGNORECASE,
+)
+_COMMAND_ONLY_TARGET_RE = re.compile(
+    r"\b(?:blog|blog\s+post|article|post|essay|content|piece)\b.*"
+    r"\b(?:about|on|regarding|for)\b",
+    re.IGNORECASE,
+)
+_BARE_TOPIC_RE = re.compile(
+    r"^\s*(?:blog|blog\s+post|article|post|essay|content|piece)\s+"
+    r"(?:about|on|regarding|for)\s+\S+",
+    re.IGNORECASE,
+)
+
+
+def _looks_like_command_only_request(text: str) -> bool:
+    """Return True when the input is only a request for a topic, not source notes."""
+    cleaned = " ".join(text.strip().split())
+    if not cleaned:
+        return False
+    if any(marker in text for marker in ("\n", ":", ";", " - ", " * ")):
+        return False
+    words = re.findall(r"[A-Za-z0-9']+", cleaned)
+    if len(words) > 12:
+        return False
+    if _COMMAND_ONLY_PREFIX_RE.search(cleaned) and _COMMAND_ONLY_TARGET_RE.search(cleaned):
+        return True
+    return bool(_BARE_TOPIC_RE.search(cleaned))
+
+
+def _command_only_thin_reason() -> str:
+    return (
+        "The input is a command to write about a broad topic, not source material "
+        "with a main idea and supporting points. Add 2-5 specific notes, claims, "
+        "examples, or transcript details before drafting."
+    )
 
 
 def make_normalize_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
@@ -55,6 +96,21 @@ def make_normalize_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
         transcript: str | None = state.get("transcript")  # type: ignore[assignment]
         raw_input: str = state.get("raw_input", "")  # type: ignore[assignment]
         content_to_normalize: str = transcript if transcript else raw_input
+
+        if _looks_like_command_only_request(content_to_normalize):
+            thin_reason = _command_only_thin_reason()
+            tel.log("normalize.command_only_input")
+            return {
+                "normalized_content": content_to_normalize.strip(),
+                "extracted_ideas": ExtractedIdeas(
+                    main_idea="",
+                    key_points=(),
+                    suggested_angle=None,
+                    source_notes=(),
+                    usable=False,
+                    thin_reason=thin_reason,
+                ),
+            }
 
         # ── Build messages first (eleventh repair) ────────────────────────────
         # Prompt is constructed before authorization so the actual token count can

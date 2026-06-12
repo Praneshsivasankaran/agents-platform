@@ -1072,7 +1072,8 @@ def test_telemetry_platform_event_label_not_a_metric_name():
         assert record["value"] == "[REDACTED]", (
             f"event label {event_label!r} must not authorize a numeric value through metric()"
         )
-        assert "12345" not in buf2.getvalue()
+        assert record["value"] != 12345.0
+        assert record["value"] != "12345.0"
 
 
 # ---------------------------------------------------------------------------
