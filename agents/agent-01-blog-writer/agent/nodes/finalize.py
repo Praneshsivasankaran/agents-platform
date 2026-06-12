@@ -197,11 +197,9 @@ def _fallback_enrichment(blog_plan: BlogPlan | None, draft: str | None) -> BlogE
     title = (blog_plan.title if blog_plan else None) or "Untitled Post"
     # Alternative title: simple reformulation of the main title
     alt_title = f"{title} — A Complete Guide"
-    # Short summary: first 200 chars of draft, or a fallback sentence
-    raw = (draft or "").strip()
-    summary = raw[:200].strip() if raw else ""
-    if not summary:
-        summary = f"A blog post about {title}."
+    # Short summary: first complete prose sentence from the draft body, skipping
+    # Markdown headings so the UI does not show "# Title ..." or mid-sentence text.
+    summary = _derive_short_summary(title=title, draft=draft)
     # SEO keywords: prefer BlogPlan.target_keywords (seventh repair schema addition);
     # fall back to section headings if target_keywords is empty.
     if blog_plan and blog_plan.target_keywords:
@@ -225,3 +223,35 @@ def _fallback_enrichment(blog_plan: BlogPlan | None, draft: str | None) -> BlogE
         suggested_tags=tags,
         meta_description=meta,
     )
+
+
+def _derive_short_summary(*, title: str, draft: str | None) -> str:
+    """Return a clean one-sentence summary derived from the draft body."""
+    fallback = f"A blog post about {title}."
+    raw = (draft or "").strip()
+    if not raw:
+        return fallback
+
+    prose_lines: list[str] = []
+    for line in raw.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#"):
+            continue
+        prose_lines.append(stripped)
+
+    prose = " ".join(" ".join(prose_lines).split())
+    if not prose:
+        return fallback
+
+    # Prefer a complete sentence between 40 and 260 chars.
+    for idx, ch in enumerate(prose):
+        if ch in ".!?" and idx >= 40:
+            return prose[: idx + 1].strip()
+
+    if len(prose) <= 260:
+        return prose
+
+    clipped = prose[:260].rsplit(" ", 1)[0].rstrip(" ,;:")
+    return (clipped or fallback).rstrip(".") + "."

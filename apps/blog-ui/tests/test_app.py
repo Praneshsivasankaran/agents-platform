@@ -158,6 +158,7 @@ def test_result_page_renders_stored_output(client):
     assert result.status_code == 200
     assert "Run " in result.text
     assert "Stage costs" in result.text
+    assert 'class="summary"' in result.text
 
 
 def test_voice_upload_file_is_cleaned_after_run(client, ui):

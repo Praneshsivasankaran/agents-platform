@@ -33,6 +33,7 @@ import math
 import pytest
 from pydantic import ValidationError
 
+from agent.nodes.finalize import _derive_short_summary
 from agent.schemas import (
     BlogEnrichment,
     BlogPackage,
@@ -773,6 +774,28 @@ def test_blog_enrichment_rejects_empty_short_summary():
 def test_blog_enrichment_rejects_whitespace_only_short_summary():
     with pytest.raises(ValidationError, match="short_summary"):
         _make_enrichment(short_summary="   ")
+
+
+def test_derive_short_summary_skips_markdown_title_and_ends_sentence():
+    draft = """# AI Agents for Small Business
+
+In the world of small business, time is the most precious commodity. Every day, teams lose hours to repeated support tickets and routine knowledge-work tasks.
+
+## A later section
+More text here.
+"""
+
+    summary = _derive_short_summary(title="AI Agents for Small Business", draft=draft)
+
+    assert not summary.startswith("#")
+    assert "AI Agents for Small Business" not in summary
+    assert summary == "In the world of small business, time is the most precious commodity."
+
+
+def test_derive_short_summary_falls_back_when_draft_has_only_heading():
+    summary = _derive_short_summary(title="Fallback Title", draft="# Fallback Title")
+
+    assert summary == "A blog post about Fallback Title."
 
 
 def test_blog_enrichment_rejects_empty_seo_keywords():

@@ -93,6 +93,16 @@ button {
 .status-needs_human, .status-stopped_cost_ceiling { background: #78350f; color: #fde68a; }
 .status-error { background: #7f1d1d; color: #fecaca; }
 
+.summary {
+  background: #0f172a;
+  border-left: 4px solid #60a5fa;
+  border-radius: 10px;
+  color: #dbeafe;
+  line-height: 1.6;
+  margin-top: 0;
+  padding: 14px 16px;
+}
+
 .grid {
   display: grid;
   gap: 14px;
