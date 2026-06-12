@@ -2171,3 +2171,137 @@ def test_core_contract_model_schema_accepted():
     mod.completion.assert_called_once()
     assert result.structured is not None
     assert isinstance(result.structured, _FakeSchema)
+
+
+# ---------------------------------------------------------------------------
+# Cycle 4 UI live-path hardening — bounded provider retry with honest cost
+# ---------------------------------------------------------------------------
+
+def test_provider_call_retries_once_and_combines_failed_attempt_usage():
+    """One transient provider failure is retried, while failed-attempt cost remains in usage."""
+    from core.providers.gcp.llm import LiteLLMProvider
+
+    cfg = {
+        **_FULL_CFG,
+        "llm": {**_FULL_CFG["llm"], "provider_call_max_attempts": 2},
+    }
+    p = LiteLLMProvider(cfg)
+    resp = _mock_litellm_response("ok", prompt_tokens=10, completion_tokens=20)
+
+    with _fake_litellm(completion_return=resp, completion_cost_return=0.001) as mod:
+        mod.completion.side_effect = [TimeoutError("transient"), resp]
+        result = p.respond(
+            [{"role": "user", "content": "hi"}],
+            tier="cheap",
+            params={"max_tokens": 7, "_authorized_prompt_tokens": 100},
+        )
+
+    assert mod.completion.call_count == 2
+    assert result.text == "ok"
+    # First attempt is conservative synthetic usage; second is real response usage.
+    assert result.usage.prompt_tokens == 110
+    assert result.usage.completion_tokens == 27
+    assert result.usage.cost_native > 0.001
+    assert result.usage.synthetic is True
+
+
+def test_provider_call_all_attempts_fail_combines_conservative_usage():
+    """If all retry attempts fail, BillableProviderError carries every attempted-call estimate."""
+    from core.providers.gcp.llm import LiteLLMProvider
+    from core.interfaces.errors import BillableProviderError
+
+    cfg = {
+        **_FULL_CFG,
+        "llm": {**_FULL_CFG["llm"], "provider_call_max_attempts": 2},
+    }
+    p = LiteLLMProvider(cfg)
+
+    with _fake_litellm(completion_return=None) as mod:
+        mod.completion.side_effect = TimeoutError("transient")
+        with pytest.raises(BillableProviderError) as exc_info:
+            p.respond(
+                [{"role": "user", "content": "hi"}],
+                tier="cheap",
+                params={"max_tokens": 7, "_authorized_prompt_tokens": 100},
+            )
+
+    err = exc_info.value
+    assert mod.completion.call_count == 2
+    assert err.category == "provider_call_failed"
+    assert err.usage.prompt_tokens == 200
+    assert err.usage.completion_tokens == 14
+    assert err.usage.cost_native > 0
+    assert err.usage.synthetic is True
+    assert err.__cause__ is None
+    assert err.__context__ is None
+
+
+def test_provider_retry_usage_preserved_when_success_response_later_malformed():
+    """Retry cost is still preserved if the successful attempt has a malformed response body."""
+    from core.providers.gcp.llm import LiteLLMProvider
+    from core.interfaces.errors import BillableProviderError
+
+    cfg = {
+        **_FULL_CFG,
+        "llm": {**_FULL_CFG["llm"], "provider_call_max_attempts": 2},
+    }
+    p = LiteLLMProvider(cfg)
+    resp = _mock_litellm_response("", prompt_tokens=10, completion_tokens=0)
+
+    with _fake_litellm(completion_return=resp, completion_cost_return=0.001) as mod:
+        mod.completion.side_effect = [TimeoutError("transient"), resp]
+        with pytest.raises(BillableProviderError) as exc_info:
+            p.respond(
+                [{"role": "user", "content": "hi"}],
+                tier="cheap",
+                params={"max_tokens": 7, "_authorized_prompt_tokens": 100},
+            )
+
+    assert mod.completion.call_count == 2
+    assert exc_info.value.category == "response_empty"
+    assert exc_info.value.usage.prompt_tokens == 110
+    assert exc_info.value.usage.completion_tokens == 7
+    assert exc_info.value.usage.synthetic is True
+
+
+def test_request_timeout_forwarded_to_litellm():
+    """Configured request_timeout_s is forwarded as LiteLLM timeout."""
+    from core.providers.gcp.llm import LiteLLMProvider
+
+    cfg = {
+        **_FULL_CFG,
+        "llm": {**_FULL_CFG["llm"], "request_timeout_s": 123},
+    }
+    p = LiteLLMProvider(cfg)
+    resp = _mock_litellm_response("ok", prompt_tokens=10, completion_tokens=20)
+
+    with _fake_litellm(completion_return=resp, completion_cost_return=0.001) as mod:
+        p.respond([{"role": "user", "content": "hi"}], tier="cheap")
+
+    assert mod.completion.call_args.kwargs["timeout"] == 123.0
+
+
+@pytest.mark.parametrize("bad_value", [0, -1, True, 1.5, "2"])
+def test_provider_call_max_attempts_validation(bad_value):
+    """Retry attempt count must be a positive non-bool integer."""
+    from core.providers.gcp.llm import LiteLLMProvider
+
+    cfg = {
+        **_FULL_CFG,
+        "llm": {**_FULL_CFG["llm"], "provider_call_max_attempts": bad_value},
+    }
+    with pytest.raises(ValueError, match="provider_call_max_attempts"):
+        LiteLLMProvider(cfg)
+
+
+@pytest.mark.parametrize("bad_value", [0, -1, False, float("nan"), float("inf"), "180"])
+def test_request_timeout_validation(bad_value):
+    """Request timeout must be positive, finite, and numeric."""
+    from core.providers.gcp.llm import LiteLLMProvider
+
+    cfg = {
+        **_FULL_CFG,
+        "llm": {**_FULL_CFG["llm"], "request_timeout_s": bad_value},
+    }
+    with pytest.raises(ValueError, match="request_timeout_s"):
+        LiteLLMProvider(cfg)

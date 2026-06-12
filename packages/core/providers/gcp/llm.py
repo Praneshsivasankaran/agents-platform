@@ -46,6 +46,47 @@ def _validate_nonempty_str(label: str, value: object) -> str:
     return stripped
 
 
+def _positive_int(label: str, value: object) -> int:
+    """Validate a positive non-bool integer config value."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(
+            f"LiteLLMProvider: {label} must be a positive integer, "
+            f"got {value!r} (type={type(value).__name__!r})"
+        )
+    return value
+
+
+def _positive_finite_float(label: str, value: object) -> float:
+    """Validate a positive finite numeric config value."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(
+            f"LiteLLMProvider: {label} must be a positive finite number, "
+            f"got {value!r} (type={type(value).__name__!r})"
+        )
+    coerced = float(value)
+    if not math.isfinite(coerced) or coerced <= 0:
+        raise ValueError(
+            f"LiteLLMProvider: {label}={coerced!r} must be finite and > 0"
+        )
+    return coerced
+
+
+def _combine_usage(first: Usage, second: Usage) -> Usage:
+    """Combine retry-attempt usage without losing conservative failed-call cost."""
+    if first.currency != second.currency:
+        raise ValueError(
+            "LiteLLMProvider: cannot combine usage entries with different currencies"
+        )
+    return Usage(
+        prompt_tokens=first.prompt_tokens + second.prompt_tokens,
+        completion_tokens=first.completion_tokens + second.completion_tokens,
+        audio_seconds=first.audio_seconds + second.audio_seconds,
+        cost_native=first.cost_native + second.cost_native,
+        currency=first.currency,
+        synthetic=first.synthetic or second.synthetic,
+    )
+
+
 # Internal params recognised and stripped before forwarding to litellm.
 # Any other _-prefixed key in params raises ValueError (unknown internal param).
 _SUPPORTED_INTERNAL_PARAMS: frozenset[str] = frozenset({"_authorized_prompt_tokens"})
@@ -149,6 +190,14 @@ class LiteLLMProvider(LLMProvider):
                 )
 
         self._tier_models: dict[str, str] = {str(k): str(v) for k, v in tier_models.items()}
+        self._provider_call_max_attempts = _positive_int(
+            "llm.provider_call_max_attempts",
+            llm_cfg.get("provider_call_max_attempts", 2),
+        )
+        self._request_timeout_s = _positive_finite_float(
+            "llm.request_timeout_s",
+            llm_cfg.get("request_timeout_s", 180.0),
+        )
 
         cost_cfg = cfg.get("cost", {})
 
@@ -307,6 +356,7 @@ class LiteLLMProvider(LLMProvider):
         }
         model = self._tier_models[tier]
         call_kwargs["model"] = model
+        call_kwargs.setdefault("timeout", self._request_timeout_s)
 
         if response_schema is not None:
             # LiteLLM documented structured output: pass the Pydantic model directly as
@@ -559,18 +609,28 @@ class LiteLLMProvider(LLMProvider):
         # Once we call litellm, ambiguous failures (timeout, network drop) may have been billed.
         _pending_error: BillableProviderError | None = None
         response = None
-        try:
-            response = _litellm.completion(
-                model=call_model,
-                messages=effective_messages,
-                **call_kwargs,
+        failed_attempt_usage: Usage | None = None
+        for _attempt in range(self._provider_call_max_attempts):
+            try:
+                response = _litellm.completion(
+                    model=call_model,
+                    messages=effective_messages,
+                    **call_kwargs,
+                )
+                break
+            except Exception:
+                # Ambiguous provider failures may have been billed. Keep the
+                # conservative failed-attempt cost even if a later retry succeeds.
+                failed_attempt_usage = (
+                    pre_conservative
+                    if failed_attempt_usage is None
+                    else _combine_usage(failed_attempt_usage, pre_conservative)
+                )
+        if response is None:
+            _pending_error = BillableProviderError(
+                failed_attempt_usage or pre_conservative,
+                "provider_call_failed",
             )
-        except Exception:
-            # A network error, timeout, or partial failure may have reached Vertex and
-            # incurred cost. Use pre-computed conservative usage — never call
-            # _conservative_usage() here (would re-enter exception context and could
-            # leak the raw provider exception via __context__ if estimation failed).
-            _pending_error = BillableProviderError(pre_conservative, "provider_call_failed")
         if _pending_error is not None:
             raise _pending_error  # raised OUTSIDE except → no __context__, no __cause__
 
@@ -592,9 +652,17 @@ class LiteLLMProvider(LLMProvider):
             )
         except Exception:
             # Use pre-computed conservative usage (never call _conservative_usage inside except).
-            _pending_error = BillableProviderError(pre_conservative, "usage_extraction_failed")
+            conservative = (
+                _combine_usage(failed_attempt_usage, pre_conservative)
+                if failed_attempt_usage is not None
+                else pre_conservative
+            )
+            _pending_error = BillableProviderError(conservative, "usage_extraction_failed")
         if _pending_error is not None:
             raise _pending_error
+
+        if failed_attempt_usage is not None:
+            usage = _combine_usage(failed_attempt_usage, usage)
 
         # --- Step 3: validate and extract response text ---
         _pending_error = None

@@ -14,6 +14,8 @@ llm:
   # Issue 4: Vertex project resolved from env via SecretStore
   vertex_project_secret: VERTEX_AI_PROJECT    # resolved via SecretStore
   vertex_location: us-central1                # default Vertex AI region
+  provider_call_max_attempts: 2                # one bounded retry for transient Vertex/LiteLLM failures
+  request_timeout_s: 180                       # fail boundedly; do not leave UI runs hanging
 
 cost:
   is_mock: false
