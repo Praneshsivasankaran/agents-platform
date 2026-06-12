@@ -172,6 +172,21 @@ def test_voice_upload_file_is_cleaned_after_run(client, ui):
     assert [p.name for p in ui.UPLOADS_DIR.iterdir()] == []
 
 
+def test_oversized_upload_returns_413_and_leaves_no_file(client, ui, monkeypatch):
+    monkeypatch.setenv("BLOG_UI_MAX_UPLOAD_BYTES", "8")
+    response = client.post(
+        "/runs",
+        data={"input_type": "voice"},
+        files={"upload": ("voice.wav", b"this is larger than eight bytes", "audio/wav")},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 413
+    assert "too large" in response.text
+    assert "8 bytes" in response.text
+    assert [p.name for p in ui.UPLOADS_DIR.iterdir()] == []
+
+
 def test_cloud_sdk_not_imported_by_ui_import():
     code = f"""
 import importlib.util

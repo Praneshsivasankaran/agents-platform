@@ -27,6 +27,8 @@ REPO_ROOT = APP_DIR.parents[1]
 AGENT_DIR = REPO_ROOT / "agents" / "agent-01-blog-writer"
 RUNS_DIR = APP_DIR / "runs"
 UPLOADS_DIR = APP_DIR / "uploads"
+DEFAULT_MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+UPLOAD_CHUNK_BYTES = 1024 * 1024
 
 for path in (RUNS_DIR, UPLOADS_DIR):
     path.mkdir(parents=True, exist_ok=True)
@@ -168,12 +170,50 @@ def _safe_suffix(filename: str, input_type: str) -> str:
     return ".mp4" if input_type == "video" else ".wav"
 
 
+def _max_upload_bytes() -> int:
+    raw = os.environ.get("BLOG_UI_MAX_UPLOAD_BYTES")
+    if raw is None or not raw.strip():
+        return DEFAULT_MAX_UPLOAD_BYTES
+    try:
+        value = int(raw)
+    except ValueError:
+        raise ValueError("BLOG_UI_MAX_UPLOAD_BYTES must be a positive integer") from None
+    if value <= 0:
+        raise ValueError("BLOG_UI_MAX_UPLOAD_BYTES must be a positive integer")
+    return value
+
+
+def _format_bytes(size: int) -> str:
+    if size >= 1024 * 1024 and size % (1024 * 1024) == 0:
+        return f"{size // (1024 * 1024)} MB"
+    if size >= 1024 and size % 1024 == 0:
+        return f"{size // 1024} KB"
+    return f"{size} bytes"
+
+
 async def _store_upload(upload: UploadFile, input_type: str, run_id: str) -> Path:
     destination = UPLOADS_DIR / f"{run_id}{_safe_suffix(upload.filename or '', input_type)}"
-    with destination.open("wb") as out:
-        while chunk := await upload.read(1024 * 1024):
-            out.write(chunk)
-    return destination
+    max_bytes = _max_upload_bytes()
+    total = 0
+    try:
+        with destination.open("wb") as out:
+            while chunk := await upload.read(UPLOAD_CHUNK_BYTES):
+                total += len(chunk)
+                if total > max_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=(
+                            "Upload is too large. Maximum allowed size is "
+                            f"{_format_bytes(max_bytes)}."
+                        ),
+                    )
+                out.write(chunk)
+        return destination
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
+
+
 
 
 @app.get("/health")
@@ -216,6 +256,8 @@ async def create_run(
             raw_input = str(upload_path)
 
         package = _package_to_dict(run_agent(normalized_type, raw_input, provider_mode=provider_mode))
+    except HTTPException:
+        raise
     except UserFacingError as exc:
         package = _serializable_error(str(exc))
     except Exception as exc:

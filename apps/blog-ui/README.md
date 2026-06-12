@@ -52,3 +52,10 @@ apps/blog-ui/runs/{run_id}.json
 
 Uploads are written under `apps/blog-ui/uploads/` only for the duration of the
 request and are deleted after the graph returns. Raw media is not committed.
+
+Upload size is capped before agent execution. The default is 500 MB; override
+for local testing or stricter deployments with:
+
+```powershell
+$env:BLOG_UI_MAX_UPLOAD_BYTES = "104857600"  # 100 MB
+```

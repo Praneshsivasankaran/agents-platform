@@ -102,6 +102,11 @@ def test_constructor_accepts_long_form_duration_limit():
     assert provider._max_duration_s == 900
 
 
+def test_constructor_rejects_invalid_long_running_timeout():
+    with pytest.raises(ValueError, match="long_running_timeout_s"):
+        GCPTranscriptionProvider(_cfg(long_running_timeout_s=0))
+
+
 def test_constructor_requires_max_duration_s_explicitly():
     """max_duration_s is required (not defaulted) — omitting it must fail loudly, not silently
     fall back to a value that always trips the ceiling guard."""
@@ -249,6 +254,35 @@ def test_long_form_uses_gcs_uri_and_deletes_transient_object(tmp_path):
     assert storage.deleted_keys == storage.put_keys
 
 
+def test_long_form_passes_configured_timeout_to_operation_result(tmp_path):
+    class FakeStorage:
+        def __init__(self):
+            self.put_keys = []
+            self.deleted_keys = []
+
+        def put(self, key, data):
+            self.put_keys.append(key)
+            return key
+
+        def uri_for(self, key):
+            return f"gs://bucket/{key}"
+
+        def delete(self, key):
+            self.deleted_keys.append(key)
+
+    storage = FakeStorage()
+    provider = GCPTranscriptionProvider(
+        _cfg(max_duration_s=120, sync_max_duration_s=55, long_running_timeout_s=42),
+        object_storage=storage,
+    )
+    client, modules = _speech_modules(long_response=_response("long transcript"))
+    with patch.dict(sys.modules, modules):
+        provider.transcribe(_wav(tmp_path, seconds=56))
+    operation = client.long_running_recognize.return_value
+    operation.result.assert_called_once_with(timeout=42.0)
+    assert storage.deleted_keys == storage.put_keys
+
+
 def test_long_form_provider_failure_still_deletes_transient_object(tmp_path):
     class FakeStorage:
         def __init__(self):
@@ -279,6 +313,40 @@ def test_long_form_provider_failure_still_deletes_transient_object(tmp_path):
     assert exc_info.value.usage.cost_native > 0
     assert storage.deleted_keys == storage.put_keys
     assert "RAW_PROVIDER_CANARY" not in repr(exc_info.value)
+
+
+def test_long_form_timeout_is_billable_and_deletes_transient_object(tmp_path):
+    class FakeStorage:
+        def __init__(self):
+            self.put_keys = []
+            self.deleted_keys = []
+
+        def put(self, key, data):
+            self.put_keys.append(key)
+            return key
+
+        def uri_for(self, key):
+            return f"gs://bucket/{key}"
+
+        def delete(self, key):
+            self.deleted_keys.append(key)
+
+    storage = FakeStorage()
+    provider = GCPTranscriptionProvider(
+        _cfg(max_duration_s=120, sync_max_duration_s=55, long_running_timeout_s=1),
+        object_storage=storage,
+    )
+    client, modules = _speech_modules()
+    client.long_running_recognize.return_value.result.side_effect = TimeoutError(
+        "RAW_TIMEOUT_CANARY"
+    )
+    with patch.dict(sys.modules, modules):
+        with pytest.raises(BillableProviderError) as exc_info:
+            provider.transcribe(_wav(tmp_path, seconds=56))
+    assert exc_info.value.category == "provider_call_failed"
+    assert exc_info.value.usage.cost_native > 0
+    assert storage.deleted_keys == storage.put_keys
+    assert "RAW_TIMEOUT_CANARY" not in repr(exc_info.value)
 
 
 def test_long_form_cleanup_failure_is_billable_and_content_free(tmp_path):
