@@ -20,13 +20,15 @@ import pytest
 
 from core.cost import CostCeilingExceeded
 from core.interfaces import LLMProvider, LLMResponse
+from core.interfaces.errors import BillableProviderError
 from core.interfaces.llm import Tier
 from core.interfaces.usage import Usage
 from core.providers.mock.llm import MockLLMProvider, _apply_scenario, _mock_data
 from core.providers.mock.telemetry import StdoutTelemetry
 
 from agent.graph import build_graph
-from agent.schemas import BlogPackage, QualityReport as _QualityReport
+from agent.nodes.review import RawQualityReport as _RawQualityReport
+from agent.schemas import BlogPackage
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +128,22 @@ class CountingLLMProvider(LLMProvider):
         )
 
 
+class ParamCapturingLLMProvider(LLMProvider):
+    """Provider that records params sent by nodes before delegating to the mock."""
+    name = "param_capture"
+
+    def __init__(self):
+        self.calls: list[dict[str, Any]] = []
+        self._delegate = MockLLMProvider(default_scenario="pass")
+
+    def respond(self, messages, *, tier, params=None, tools=None, response_schema=None):
+        self.calls.append({"tier": tier, "params": dict(params or {})})
+        return self._delegate.respond(
+            messages, tier=tier, params=params, tools=tools,
+            response_schema=response_schema,
+        )
+
+
 def test_provider_not_called_after_budget_rejection():
     """When ceiling is tiny, authorize_call rejects before any LLM call."""
     llm = CountingLLMProvider()
@@ -135,6 +153,39 @@ def test_provider_not_called_after_budget_rejection():
     assert llm.call_count == 0, (
         f"Expected 0 LLM calls after budget rejection, got {llm.call_count}"
     )
+
+
+def test_live_output_caps_limit_all_llm_node_max_tokens():
+    """Stage output caps prevent a live call from consuming all headroom.
+
+    Without max_output_tokens, early calls can receive a huge max_tokens value because
+    most of the run budget is still available, while review can truncate structured
+    JSON if its cap is too low.  Each node must cap the outgoing provider param to
+    its configured stage limit.
+    """
+    cfg = _cfg_mock()
+    cfg["cost"]["is_mock"] = False
+    cfg["cost"]["output_cost_per_token_inr"] = {"cheap": 0.000001, "strong": 0.000001}
+    cfg["cost"]["input_cost_per_token_inr"] = {"cheap": 0.000001, "strong": 0.000001}
+    cfg["cost"]["max_output_tokens"] = {
+        "normalize": 123,
+        "extract_ideas": 456,
+        "plan": 789,
+        "draft": 1011,
+        "review": 1213,
+    }
+
+    llm = ParamCapturingLLMProvider()
+    pkg = _run(llm, cfg)
+
+    assert pkg.status == "pass"
+    assert [call["params"]["max_tokens"] for call in llm.calls[:5]] == [
+        123,
+        456,
+        789,
+        1011,
+        1213,
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -488,10 +539,10 @@ class ReviewStructuredNoneProvider(LLMProvider):
             prompt_tokens=10, completion_tokens=10,
             cost_native=cost_native, currency="USD",
         )
-        # Only intercept the review node (response_schema=QualityReport).
+        # Only intercept the review node (response_schema=RawQualityReport).
         # All other nodes (ExtractedIdeas, BlogPlan, text-only normalize/draft)
         # must succeed normally so the graph reaches review.
-        if response_schema is _QualityReport:
+        if response_schema is _RawQualityReport:
             return LLMResponse(text="", usage=usage)   # structured=None → triggers BillableNodeError
 
         resp = self._delegate.respond(
@@ -503,6 +554,29 @@ class ReviewStructuredNoneProvider(LLMProvider):
                 type(resp.structured), resp.structured.model_dump(), usage=usage,
             )
         return LLMResponse(text=resp.text or "", usage=usage)
+
+
+class ReviewBillableProviderFailure(LLMProvider):
+    """Provider that reaches review, then raises a content-free billable category."""
+    name = "review_billable_failure"
+
+    def __init__(self, category: str = "schema_validation_failed"):
+        self._category = category
+        self._delegate = MockLLMProvider(default_scenario="pass")
+
+    def respond(self, messages, *, tier, params=None, tools=None, response_schema=None):
+        if response_schema is _RawQualityReport:
+            usage = Usage(
+                prompt_tokens=100,
+                completion_tokens=100,
+                cost_native=1.0 / 83.0,
+                currency="USD",
+            )
+            raise BillableProviderError(usage, self._category)
+        return self._delegate.respond(
+            messages, tier=tier, params=params, tools=tools,
+            response_schema=response_schema,
+        )
 
 
 def test_billable_node_error_preserves_cost_in_ledger():
@@ -561,6 +635,21 @@ def test_billable_node_error_preserves_cost_in_ledger():
         "node.error log event must be emitted when BillableNodeError is raised "
         "in the review node (final repair Item 5: node.error telemetry)"
     )
+
+
+def test_billable_provider_error_category_is_surfaced_safely():
+    """Final notes include only the content-free provider failure category.
+
+    Live structured-output failures are otherwise impossible to distinguish from
+    generic RuntimeError-in-review failures.  The category is allowlisted by
+    core.interfaces.errors and contains no raw provider message or response text.
+    """
+    llm = ReviewBillableProviderFailure(category="schema_validation_failed")
+    pkg = _run(llm, _cfg_mock(ceiling_inr=50.0))
+
+    assert pkg.status == "error"
+    assert "Billable provider failure in review: schema_validation_failed" in (pkg.notes or "")
+    assert "RAW" not in (pkg.notes or "")
 
 
 def test_billable_node_error_does_not_route_to_stopped_cost_ceiling():

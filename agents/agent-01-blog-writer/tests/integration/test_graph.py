@@ -353,9 +353,9 @@ def test_hard_fail_flags_flow_into_package():
             if response_schema is None:
                 return LLMResponse(text="[multi_flag] draft body", usage=usage)
 
-            from agent.schemas import QualityReport, SubScores
-            if response_schema is QualityReport:
-                # Repair: sub_scores must sum to overall_score (schema validator)
+            from agent.nodes.review import RawQualityReport
+            from agent.schemas import SubScores
+            if response_schema is RawQualityReport:
                 ss = SubScores(
                     structure_flow=3, clarity_readability=3, idea_coverage=4,
                     originality=3, tone_audience_fit=3, seo_usefulness=3,
@@ -363,9 +363,6 @@ def test_hard_fail_flags_flow_into_package():
                 )  # sum = 26
                 data = dict(
                     sub_scores=ss,
-                    overall_score=26,
-                    pass_flag=False,
-                    needs_human=True,
                     hard_fail_flags=("injection_followed", "harmful_content"),
                     revision_notes="Multiple critical issues.",
                 )

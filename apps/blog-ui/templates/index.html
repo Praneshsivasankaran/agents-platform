@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 01 Blog UI</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="page">
+      <section class="card">
+        <p class="eyebrow">Agent 01</p>
+        <h1>Generate a review-ready blog package</h1>
+        <p class="muted">
+          Basic internal UI. Current provider:
+          <strong>{% if provider_mode == "gcp" %}GCP live{% else %}offline test mode{% endif %}</strong>.
+        </p>
+        {% if missing_gcp_env %}
+          <p class="notice">
+            GCP live mode is missing: {{ missing_gcp_env|join(", ") }}.
+            Set these in PowerShell and restart the UI before generating.
+          </p>
+        {% endif %}
+
+        <form action="/runs" method="post" enctype="multipart/form-data" class="form">
+          <label>
+            Input type
+            <select name="input_type">
+              <option value="text">Text</option>
+              <option value="voice">Voice upload</option>
+              <option value="video">Video upload</option>
+            </select>
+          </label>
+
+          <label>
+            Text input
+            <textarea name="raw_text" rows="12" placeholder="Paste notes, transcript text, or rough ideas here."></textarea>
+          </label>
+
+          <label>
+            Voice/video file
+            <input type="file" name="upload" accept="audio/*,video/*">
+          </label>
+
+          <button type="submit">Generate Blog</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

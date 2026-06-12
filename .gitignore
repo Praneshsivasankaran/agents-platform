@@ -34,3 +34,9 @@ infra/**/terraform.tfvars
 
 # Full transitive dependency lock (regenerate per environment — see docs/DEPENDENCY-MANAGEMENT.md)
 constraints.lock.txt
+
+# Local basic UI runtime data
+apps/blog-ui/runs/*.json
+apps/blog-ui/uploads/*
+!apps/blog-ui/runs/.gitkeep
+!apps/blog-ui/uploads/.gitkeep

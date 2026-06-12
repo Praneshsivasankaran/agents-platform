@@ -99,6 +99,25 @@ cost:
   max_prompt_tokens:
     cheap: 16384
     strong: 32768
+  # Per-stage output caps keep one early LLM call from consuming the whole
+  # run budget just because headroom is available.  Mock runs ignore these when
+  # no max_tokens cap is derivable; live overlays use them as hard caps.
+  #
+  # IMPORTANT: both live tiers are Gemini 2.5 reasoning models, and internal
+  # reasoning ("thinking") tokens count against max_tokens BEFORE any text is
+  # emitted.  A 1024 cap was proven insufficient live: normalize burned the whole
+  # budget reasoning, emitted a truncated fragment, and extract_ideas then judged
+  # the run thin (needs_human) on good input.  4096 leaves reasoning headroom on
+  # every stage while still bounding worst-case spend (~Rs0.85/stage on the cheap
+  # tier).  The Rs50 ceiling is enforced independently by authorize_call — nodes
+  # apply min(authorized_max_tokens, this cap), so raising a cap here can never
+  # loosen budget enforcement.
+  max_output_tokens:
+    normalize: 4096
+    extract_ideas: 4096
+    plan: 4096
+    draft: 4096
+    review: 4096
 
 # ---------------------------------------------------------------------------
 # Graph control (DESIGN §1.3)

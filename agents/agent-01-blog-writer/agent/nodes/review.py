@@ -25,9 +25,76 @@ from core.cost import CostCeilingExceeded, authorize_call, estimate_prompt_token
 from core.interfaces import Telemetry
 from core.interfaces.errors import BillableProviderError
 from core.interfaces.llm import LLMProvider
+from core.interfaces.base import CoreContractModel
 from ..prompts import build_system, review_prompt
-from ..schemas import BillableNodeError, BlogPlan, ExtractedIdeas, QualityReport, StageCost, _SUBSCORE_FIELDS
+from ..schemas import (
+    BillableNodeError,
+    BlogPlan,
+    ExtractedIdeas,
+    QualityReport,
+    StageCost,
+    SubScores,
+    _HARD_FAIL_CODES,
+    _SUBSCORE_FIELDS,
+    _TERMINAL_HARD_FAIL_CODES,
+    _sum_sub_scores,
+)
 from ..state import BlogState
+
+
+class RawQualityReport(CoreContractModel):
+    """LLM-facing review schema.
+
+    The final QualityReport has derived invariants that are safer to compute in
+    code than to ask a model to reproduce exactly (for example, overall_score is
+    the sum of subscores and pass_flag is a boolean formula).  This raw schema
+    collects only model judgments; _build_quality_report derives the contract
+    fields deterministically.
+    """
+
+    sub_scores: SubScores
+    hard_fail_flags: tuple[str, ...] = ()
+    revision_notes: str = ""
+    improvement_suggestions: tuple[str, ...] = ()
+
+
+def _build_quality_report(raw: RawQualityReport) -> QualityReport:
+    known_flags: list[str] = []
+    unknown_flags: list[str] = []
+    for flag in raw.hard_fail_flags:
+        if flag in _HARD_FAIL_CODES:
+            known_flags.append(flag)
+        else:
+            unknown_flags.append(flag)
+
+    if unknown_flags and "not_review_ready" not in known_flags:
+        known_flags.append("not_review_ready")
+
+    hard_fail_flags = tuple(dict.fromkeys(known_flags))
+    overall_score = _sum_sub_scores(raw.sub_scores)
+    pass_flag = overall_score >= 80 and not hard_fail_flags
+    needs_human = any(flag in _TERMINAL_HARD_FAIL_CODES for flag in hard_fail_flags)
+
+    revision_notes = raw.revision_notes.strip()
+    suggestions = tuple(s.strip() for s in raw.improvement_suggestions if s.strip())
+    if unknown_flags:
+        unknown_msg = "Review returned unrecognized hard-fail flags; revise and re-review conservatively."
+        revision_notes = (revision_notes + "\n" + unknown_msg).strip() if revision_notes else unknown_msg
+        suggestions = suggestions + ("Use only registered hard-fail categories in the next review.",)
+    if not pass_flag and not revision_notes:
+        revision_notes = "Improve the draft according to the lowest-scoring review dimensions."
+    if not pass_flag and not suggestions:
+        suggestions = ("Revise the structure, coverage, clarity, and evidence before finalizing.",)
+
+    return QualityReport(
+        overall_score=overall_score,
+        sub_scores=raw.sub_scores,
+        pass_flag=pass_flag,
+        hard_fail_flags=hard_fail_flags,
+        revision_notes=revision_notes,
+        needs_human=needs_human,
+        improvement_suggestions=suggestions,
+    )
 
 
 def make_review_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
@@ -44,6 +111,7 @@ def make_review_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
     _input_cpt: float = float(cost_cfg.get("input_cost_per_token_inr", {}).get("strong", 0.0))
     _max_prompt: int = int(cost_cfg.get("max_prompt_tokens", {}).get("strong", 4096))
     _fixed_cost: float = float(cost_cfg.get("fixed_cost_inr", {}).get("strong", 0.0))
+    _max_output_tokens: int = int(cost_cfg.get("max_output_tokens", {}).get("review", 0))
 
     def review(state: BlogState) -> dict[str, Any]:
         draft_body: str = state.get("draft", "")  # type: ignore[assignment]
@@ -72,7 +140,7 @@ def make_review_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user_msg}]
 
         # Pass response_schema so the schema's JSON overhead is included in the estimate.
-        prompt_tokens_est: int = estimate_prompt_tokens(messages, response_schema=QualityReport)
+        prompt_tokens_est: int = estimate_prompt_tokens(messages, response_schema=RawQualityReport)
         if prompt_tokens_est > _max_prompt:
             raise CostCeilingExceeded(
                 f"review: conservative prompt estimate {prompt_tokens_est} bytes "
@@ -93,7 +161,11 @@ def make_review_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
             fixed_cost_inr=_fixed_cost,
             is_mock=is_mock,
         )
-        params: dict[str, Any] = {"max_tokens": auth.max_tokens} if auth.max_tokens is not None else {}
+        if auth.max_tokens is not None:
+            max_tokens = min(auth.max_tokens, _max_output_tokens) if _max_output_tokens > 0 else auth.max_tokens
+            params: dict[str, Any] = {"max_tokens": max_tokens}
+        else:
+            params = {}
         # Always pass the authorized prompt estimate so _conservative_usage uses it exactly.
         params["_authorized_prompt_tokens"] = prompt_tokens_est
 
@@ -102,7 +174,7 @@ def make_review_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
             with tel.span("review") as span_id:
                 try:
                     response = llm.respond(
-                        messages, tier="strong", response_schema=QualityReport,
+                        messages, tier="strong", response_schema=RawQualityReport,
                         params=params,
                     )
                 except BillableProviderError as bpe:
@@ -127,7 +199,7 @@ def make_review_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
                 )
                 try:
                     tel.record_usage(response.usage, node="review", tier="strong", span_id=span_id)
-                    report: QualityReport = response.structured  # type: ignore[assignment]
+                    report = _build_quality_report(response.structured)  # type: ignore[arg-type]
                     tel.metric("stage.cost_inr", cost_inr, node="review")
                     tel.metric("quality.overall_score", report.overall_score, node="review")
                     for field in _SUBSCORE_FIELDS:

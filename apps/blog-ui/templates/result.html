@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Blog Run {{ record.run_id }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="page wide">
+      <p><a href="/">New run</a></p>
+      <section class="card">
+        <p class="eyebrow">Run {{ record.run_id }}</p>
+        <h1>{{ package.title or "Blog package" }}</h1>
+        <div class="status status-{{ package.status }}">{{ package.status }}</div>
+
+        {% if package.notes %}
+          <p class="notice">{{ package.notes }}</p>
+        {% endif %}
+
+        <dl class="grid">
+          <div><dt>Input type</dt><dd>{{ record.input_type }}</dd></div>
+          <div><dt>Provider</dt><dd>{{ record.provider_mode }}</dd></div>
+          <div><dt>Total cost</dt><dd>Rs {{ "%.4f"|format(package.cost.total_inr if package.cost else 0) }}</dd></div>
+          <div><dt>Quality score</dt><dd>{{ package.quality.overall_score if package.quality else "n/a" }}</dd></div>
+        </dl>
+
+        {% if package.hard_fail_flags %}
+          <h2>Hard-fail flags</h2>
+          <ul>{% for flag in package.hard_fail_flags %}<li>{{ flag }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if package.improvement_suggestions %}
+          <h2>Improvement suggestions</h2>
+          <ul>{% for suggestion in package.improvement_suggestions %}<li>{{ suggestion }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if package.cost and package.cost.stage_costs %}
+          <h2>Stage costs</h2>
+          <table>
+            <thead><tr><th>Stage</th><th>Tier</th><th>INR</th></tr></thead>
+            <tbody>
+              {% for stage in package.cost.stage_costs %}
+                <tr><td>{{ stage.stage }}</td><td>{{ stage.tier }}</td><td>Rs {{ "%.4f"|format(stage.cost_inr) }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if package.short_summary %}
+          <h2>Summary</h2>
+          <p>{{ package.short_summary }}</p>
+        {% endif %}
+
+        {% if package.full_draft %}
+          <h2>Draft</h2>
+          <article class="draft">{{ package.full_draft }}</article>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>
