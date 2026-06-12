@@ -72,6 +72,22 @@ from .schemas import BillableNodeError as _BillableNodeError
 # ---------------------------------------------------------------------------
 
 
+def _safe_billable_provider_category(exc: BaseException) -> str | None:
+    """Return the content-free provider failure category carried by node wrappers.
+
+    LLM nodes intentionally wrap BillableProviderError as RuntimeError with a
+    fixed ``billable-provider-failure:<category>`` message.  That category is
+    allowlisted by core.interfaces.errors and contains no prompt, response, or
+    provider exception text, so it is safe to surface in the final package note.
+    """
+    msg = str(exc)
+    prefix = "billable-provider-failure:"
+    if not msg.startswith(prefix):
+        return None
+    category = msg[len(prefix):].split()[0].strip()
+    return category or None
+
+
 def _node_with_error_guard(
     node_name: str,
     node_fn: Callable,
@@ -112,17 +128,24 @@ def _node_with_error_guard(
         except _BillableNodeError as be:
             # Post-response processing failed.  The LLM was called and billed;
             # preserve the incurred cost in the ledger before recording the error.
+            provider_category = _safe_billable_provider_category(be.cause)
+            error_kind = "BillableProviderError" if provider_category else type(be.cause).__name__
+            error_message = (
+                f"Billable provider failure in {node_name}: {provider_category}"
+                if provider_category
+                else f"{type(be.cause).__name__} in {node_name}"
+            )
             if tel is not None:
                 try:
-                    tel.log("node.error", node=node_name, kind=type(be.cause).__name__)
+                    tel.log("node.error", node=node_name, kind=error_kind)
                 except Exception:
                     pass  # telemetry failure must never hide the billing record
             return {
                 "cost_usage": [be.stage_cost],
                 "error_state": {
                     "node": node_name,
-                    "kind": type(be.cause).__name__,
-                    "message": f"{type(be.cause).__name__} in {node_name}",
+                    "kind": error_kind,
+                    "message": error_message,
                 },
             }
         except Exception as exc:

@@ -39,6 +39,7 @@ def make_extract_ideas_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
     _input_cpt: float = float(cost_cfg.get("input_cost_per_token_inr", {}).get("cheap", 0.0))
     _max_prompt: int = int(cost_cfg.get("max_prompt_tokens", {}).get("cheap", 2048))
     _fixed_cost: float = float(cost_cfg.get("fixed_cost_inr", {}).get("cheap", 0.0))
+    _max_output_tokens: int = int(cost_cfg.get("max_output_tokens", {}).get("extract_ideas", 0))
 
     def extract_ideas(state: BlogState) -> dict[str, Any]:
         normalized_content: str = state.get("normalized_content", "")  # type: ignore[assignment]
@@ -69,7 +70,11 @@ def make_extract_ideas_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
             fixed_cost_inr=_fixed_cost,
             is_mock=is_mock,
         )
-        params: dict[str, Any] = {"max_tokens": auth.max_tokens} if auth.max_tokens is not None else {}
+        if auth.max_tokens is not None:
+            max_tokens = min(auth.max_tokens, _max_output_tokens) if _max_output_tokens > 0 else auth.max_tokens
+            params: dict[str, Any] = {"max_tokens": max_tokens}
+        else:
+            params = {}
         # Always pass the authorized prompt estimate so _conservative_usage uses it exactly.
         params["_authorized_prompt_tokens"] = prompt_tokens_est
 

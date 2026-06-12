@@ -133,7 +133,7 @@ class TestVoicePath:
 
     def test_voice_review_uses_transcript_as_source_material(self):
         """The reviewer must see spoken content, not only the audio filename."""
-        from agent.schemas import QualityReport
+        from agent.nodes.review import RawQualityReport
 
         class RecordingLLM(MockLLMProvider):
             def __init__(self):
@@ -147,7 +147,7 @@ class TestVoicePath:
         llm = RecordingLLM()
         graph = build_graph(_cfg(), llm, StdoutTelemetry(service="test"), MockTranscriptionProvider())
         graph.invoke({"raw_input": "recording.wav", "input_type": "voice"})
-        review_calls = [messages for messages, schema in llm.calls if schema is QualityReport]
+        review_calls = [messages for messages, schema in llm.calls if schema is RawQualityReport]
         assert review_calls
         review_user_message = review_calls[-1][-1]["content"]
         assert "Today I want to talk about building cloud-agnostic AI agents" in review_user_message

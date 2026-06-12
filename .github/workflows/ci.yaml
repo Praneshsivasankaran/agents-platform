@@ -29,9 +29,9 @@ jobs:
 
       # 0) Static compile — catch syntax errors AND DeprecationWarnings before any runtime gate.
       #    -W error turns warnings into errors so deprecated API usage is caught in CI.
-      #    Scans packages/ and agents/ recursively; exit non-zero on any compile error or warning.
+      #    Scans packages/, agents/, and apps/ recursively; exit non-zero on any compile error or warning.
       - name: Static compile check
-        run: python -W error -m compileall -q packages agents
+        run: python -W error -m compileall -q packages agents apps
 
       # 1) Agnostic-drift guard — auto-discovers ALL agents/*/agent dirs (fail-closed if none
       #    found). Scans agent logic ONLY; never packages/core/providers/* (those may import
@@ -91,6 +91,13 @@ jobs:
         run: |
           PYTHONPATH=packages:agents/agent-02-report-writer \
           python -m pytest agents/agent-02-report-writer/tests -q
+
+      # 10) Basic internal Blog UI tests. The UI is a thin FastAPI wrapper around Agent 01
+      #     and must stay offline/mock by default with no direct cloud SDK imports.
+      - name: Basic Blog UI tests (offline/mock)
+        run: |
+          PYTHONPATH=packages:agents/agent-01-blog-writer \
+          python -m pytest apps/blog-ui/tests -q
 
   # Live smoke gate — genuine required pre-merge gate.
   # Runs only in the merge queue (trusted, PR-approved code) or on direct push to main.
