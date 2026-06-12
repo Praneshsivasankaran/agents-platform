@@ -216,6 +216,18 @@ def test_draft_prompt_discourages_generic_marketing_language():
     assert "specific, plain-language examples" in lower
 
 
+def test_draft_prompt_requests_human_blog_voice_and_raw_markdown():
+    prompt = draft_prompt("source content", "plan summary")
+    lower = prompt.lower()
+    assert "raw blog markdown" in lower
+    assert "code fences" in lower
+    assert "human blog editor" in lower
+    assert "relatable hook" in lower
+    assert "vary sentence length" in lower
+    assert "practical next steps" in lower
+    assert "in today's fast-paced world" in lower
+
+
 # ---------------------------------------------------------------------------
 # 7. review_prompt — first-party content only; no UNTRUSTED_DATA wrapper needed
 # ---------------------------------------------------------------------------
@@ -239,6 +251,15 @@ def test_review_prompt_mentions_scoring():
     prompt = review_prompt("plan", "draft", "kp")
     lower = prompt.lower()
     assert "score" in lower or "0–100" in lower or "0-100" in lower
+
+
+def test_review_prompt_penalizes_generic_or_code_fenced_drafts():
+    prompt = review_prompt("plan", "draft", "kp")
+    lower = prompt.lower()
+    assert "generic ai filler" in lower
+    assert "sterile outline" in lower
+    assert "code fences" in lower
+    assert "raw blog markdown" in lower
 
 
 def test_review_prompt_mentions_hard_fail_codes():

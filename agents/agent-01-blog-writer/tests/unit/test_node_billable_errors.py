@@ -240,6 +240,26 @@ class TestDraftBillableError:
         assert err.stage_cost.stage == "draft"
 
 
+class _FencedDraftProvider(LLMProvider):
+    name = "fenced_draft_mock"
+
+    def respond(self, messages, *, tier, params=None, tools=None, response_schema=None) -> LLMResponse:
+        usage = Usage(prompt_tokens=10, completion_tokens=10, cost_native=0.001, currency="USD")
+        return LLMResponse(text="```markdown\n# Human Title\n\nA useful paragraph.\n```", usage=usage)
+
+
+class TestDraftOutputCleanup:
+    def test_draft_strips_outer_markdown_code_fence(self):
+        """draft: accidental outer Markdown code fences are stripped before state/output."""
+        from agent.nodes.draft import make_draft_node
+
+        node_fn = make_draft_node(_cfg(), _FencedDraftProvider(), _make_tel())
+        result = node_fn(_draft_state())
+
+        assert result["draft"] == "# Human Title\n\nA useful paragraph."
+        assert "```" not in result["draft"]
+
+
 class TestReviewBillableError:
     def test_billable_provider_error_becomes_billable_node_error(self):
         """review: BillableProviderError → BillableNodeError with cost > 0."""

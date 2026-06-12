@@ -136,7 +136,7 @@ def make_draft_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
                 )
                 try:
                     tel.record_usage(response.usage, node="draft", tier="strong", span_id=span_id)
-                    body = response.text or ""
+                    body = _clean_draft_body(response.text or "")
                     tel.metric("stage.cost_inr", cost_inr, node="draft")
                     tel.metric("revision.count", new_revision_count, node="draft")
                     tel.log("draft.complete", span_id=span_id,
@@ -152,6 +152,23 @@ def make_draft_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
             raise
 
     return draft
+
+
+def _clean_draft_body(body: str) -> str:
+    """Remove accidental outer Markdown code fences from draft output."""
+    text = body.strip()
+    if not text.startswith("```"):
+        return text
+
+    lines = text.splitlines()
+    if len(lines) < 2:
+        return text
+
+    opening = lines[0].strip().lower()
+    closing = lines[-1].strip()
+    if opening in {"```", "```markdown", "```md"} and closing == "```":
+        return "\n".join(lines[1:-1]).strip()
+    return text
 
 
 def _format_plan(plan: BlogPlan) -> str:
