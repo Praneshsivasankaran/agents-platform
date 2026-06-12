@@ -207,6 +207,15 @@ def test_draft_prompt_no_revision_notes_when_blank():
     assert "revision cycle" not in prompt.lower()
 
 
+def test_draft_prompt_discourages_generic_marketing_language():
+    prompt = draft_prompt("source content", "plan summary")
+    lower = prompt.lower()
+    assert "avoid generic marketing phrases" in lower
+    assert "poised to become" in lower
+    assert "game changer" in lower
+    assert "specific, plain-language examples" in lower
+
+
 # ---------------------------------------------------------------------------
 # 7. review_prompt — first-party content only; no UNTRUSTED_DATA wrapper needed
 # ---------------------------------------------------------------------------
