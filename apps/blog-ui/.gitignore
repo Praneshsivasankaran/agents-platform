@@ -1,5 +1,6 @@
 # Runtime files for the local internal UI. Keep directories, not run data.
 runs/*.json
 uploads/*
+uvicorn.*.log
 !runs/.gitkeep
 !uploads/.gitkeep

@@ -22,6 +22,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from core.interfaces.transcription import Transcript
+from core.interfaces.usage import Usage
+from core.interfaces.llm import LLMProvider
 from core.providers.mock.llm import MockLLMProvider
 from core.providers.mock.telemetry import StdoutTelemetry
 from core.providers.mock.transcription import MockTranscriptionProvider
@@ -85,6 +88,41 @@ def _build(cfg=None):
 def _invoke(graph, raw_input: str, input_type: str) -> BlogPackage:
     result = graph.invoke({"raw_input": raw_input, "input_type": input_type})
     return result["final_output"]
+
+
+class CountingLLMProvider(LLMProvider):
+    """LLM provider that counts calls while delegating to the mock provider."""
+
+    name = "counting-llm"
+
+    def __init__(self, scenario: str = "pass"):
+        self.call_count = 0
+        self._delegate = MockLLMProvider(default_scenario=scenario)
+
+    def respond(self, messages, *, tier, params=None, tools=None, response_schema=None):
+        self.call_count += 1
+        return self._delegate.respond(
+            messages,
+            tier=tier,
+            params=params,
+            tools=tools,
+            response_schema=response_schema,
+        )
+
+
+class CommandOnlyTranscriptionProvider:
+    """Transcription provider returning the command-only transcript from the live bug."""
+
+    name = "command-only-stt"
+
+    def transcribe(self, audio_ref: str, *, language: str = "en", timestamps: bool = False, diarization: bool = False):
+        return Transcript(
+            text="Write a blog about productivity.",
+            language=language,
+            duration_s=3.0,
+            provider=self.name,
+            usage=Usage(audio_seconds=3.0, cost_native=0.001, currency="USD"),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -152,6 +190,27 @@ class TestVoicePath:
         review_user_message = review_calls[-1][-1]["content"]
         assert "Today I want to talk about building cloud-agnostic AI agents" in review_user_message
         assert "recording.wav" not in review_user_message
+
+    def test_voice_command_only_transcript_stops_before_llm_calls(self):
+        """A spoken topic command is thin input, not source material to expand."""
+        llm = CountingLLMProvider()
+        graph = build_graph(
+            _cfg(),
+            llm,
+            StdoutTelemetry(service="test"),
+            CommandOnlyTranscriptionProvider(),
+        )
+
+        pkg = graph.invoke({"raw_input": "recording.wav", "input_type": "voice"})["final_output"]
+
+        assert pkg.status == "needs_human"
+        assert llm.call_count == 0, (
+            "voice command-only transcript must stop after transcription and before LLM calls"
+        )
+        assert pkg.notes is not None
+        assert "command" in pkg.notes.lower()
+        stage_names = {cost.stage for cost in pkg.cost.stage_costs}
+        assert stage_names == {"transcribe"}
 
 
 # ---------------------------------------------------------------------------

@@ -162,6 +162,7 @@ telemetry:
     - transcribe.missing_audio_ref
     - transcribe.missing_raw_input
     - normalize.complete
+    - normalize.command_only_input
     - extract_ideas.complete
     - plan.complete
     - draft.complete
@@ -182,7 +183,7 @@ telemetry:
     provider: [mock, litellm, gcp, bedrock, azure]
     status: [pass, needs_human, stopped_cost_ceiling, error]
     # Route decision values (Item 5) — used in route.decision events.
-    decision: [ok, error, cost_ceiling, usable_false, pass, revise, needs_human, terminal_hard_fail, retriable_hard_fail]
+    decision: [ok, error, cost_ceiling, usable_false, command_only_input, pass, revise, needs_human, terminal_hard_fail, retriable_hard_fail]
     # Routing targets for route.decision events.
     target: [intake, extract_audio, transcribe, normalize, extract_ideas, plan, cost_gate, draft, review, finalize, ceiling_exceeded]
     # input_type values for intake events.

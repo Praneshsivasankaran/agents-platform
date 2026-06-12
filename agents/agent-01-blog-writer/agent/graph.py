@@ -377,6 +377,10 @@ def build_graph(
         if not state.get("cost_gate_ok", True):  # type: ignore[attr-defined]
             _emit_route("normalize", "cost_ceiling", "finalize")
             return "finalize"
+        extracted = state.get("extracted_ideas")  # type: ignore[attr-defined]
+        if extracted is not None and not extracted.usable:
+            _emit_route("normalize", "command_only_input", "finalize")
+            return "finalize"
         _emit_route("normalize", "ok", "extract_ideas")
         return "extract_ideas"
 

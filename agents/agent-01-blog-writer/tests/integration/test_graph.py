@@ -267,6 +267,25 @@ def test_thin_input_path():
     assert "review" not in stage_names
 
 
+def test_command_only_text_stops_before_normalize_llm_call():
+    """A topic command is not source material and must not be expanded by normalize."""
+    llm = CountingProvider()
+    tel = CapturingTelemetry()
+    graph = build_graph(_cfg(), llm, tel)
+
+    pkg: BlogPackage = graph.invoke(
+        {"raw_input": "Write a blog about productivity.", "input_type": "text"}
+    )["final_output"]
+
+    assert pkg.status == "needs_human"
+    assert llm.call_count == 0, (
+        "command-only input must finalize before normalize/extract/plan/draft/review LLM calls"
+    )
+    assert pkg.notes is not None
+    assert "command" in pkg.notes.lower()
+    assert {sc.stage for sc in pkg.cost.stage_costs} == set()
+
+
 # ---------------------------------------------------------------------------
 # Test 4: stopped_cost_ceiling path
 # ---------------------------------------------------------------------------
