@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 03 Run {{ record.run_id }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="page wide">
+      <p><a href="/">New run</a></p>
+
+      <section class="panel">
+        <p class="eyebrow">Run {{ record.run_id }}</p>
+        <h1>Content ideation package</h1>
+        <div class="status status-{{ package.status }}">{{ package.status }}</div>
+
+        {% if package.notes %}
+          <p class="notice">{{ package.notes }}</p>
+        {% endif %}
+
+        <dl class="grid">
+          <div><dt>Provider</dt><dd>{{ record.provider_mode }}</dd></div>
+          <div><dt>Total cost</dt><dd>Rs {{ "%.4f"|format(package.cost.total_inr if package.cost else 0) }}</dd></div>
+          <div><dt>Quality score</dt><dd>{{ package.quality_score }}</dd></div>
+          <div><dt>Recommended next</dt><dd>{{ package.recommended_next_agent }}</dd></div>
+          <div><dt>LLM ideas used</dt><dd>{{ package.generation_used_llm }}</dd></div>
+        </dl>
+
+        {% if package.campaign_summary %}
+          <h2>Campaign Summary</h2>
+          <dl class="grid compact">
+            <div><dt>Goal</dt><dd>{{ package.campaign_summary.campaign_goal }}</dd></div>
+            <div><dt>Product/service</dt><dd>{{ package.campaign_summary.product_or_service }}</dd></div>
+            <div><dt>Industry</dt><dd>{{ package.campaign_summary.industry }}</dd></div>
+            <div><dt>Objective</dt><dd>{{ package.campaign_summary.campaign_objective }}</dd></div>
+          </dl>
+          <p class="summary">{{ package.campaign_summary.value_proposition }}</p>
+        {% endif %}
+
+        {% if package.audience_insights %}
+          <h2>Audience Insights</h2>
+          <p class="summary">{{ package.audience_insights.desired_outcome }}</p>
+          {% if package.audience_insights.pain_points %}
+            <ul>
+              {% for item in package.audience_insights.pain_points %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endif %}
+
+        {% if package.content_themes %}
+          <h2>Content Themes</h2>
+          <div class="card-grid">
+            {% for theme in package.content_themes %}
+              <article class="item-card">
+                <h3>{{ theme.name }}</h3>
+                <p>{{ theme.description }}</p>
+                {% if theme.strategic_role %}<p class="muted">{{ theme.strategic_role }}</p>{% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if package.content_ideas %}
+          <h2>Content Ideas</h2>
+          <div class="idea-list">
+            {% for idea in package.content_ideas %}
+              <article class="idea-row">
+                <div>
+                  <h3>{{ idea.title }}</h3>
+                  <p>{{ idea.angle }}</p>
+                  <p class="muted">{{ idea.recommended_format }} / {{ idea.funnel_stage }}</p>
+                  <p><strong>Audience fit:</strong> {{ idea.audience_fit_reason }}</p>
+                  {% if idea.risk_flags %}
+                    <p><strong>Risk flags:</strong> {{ idea.risk_flags|join(", ") }}</p>
+                  {% endif %}
+                </div>
+                <div class="score">{{ idea.priority_score }}</div>
+              </article>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if package.hooks %}
+          <h2>Hooks</h2>
+          <ul>{% for hook in package.hooks %}<li>{{ hook }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if package.cta_suggestions %}
+          <h2>CTA Suggestions</h2>
+          <ul>
+            {% for cta in package.cta_suggestions %}
+              <li><strong>{{ cta.text }}</strong>{% if cta.fit_reason %}: {{ cta.fit_reason }}{% endif %}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        {% if blog_brief %}
+          <h2>Blog Brief For Agent 01</h2>
+          <p class="summary"><strong>{{ blog_brief.suggested_title }}</strong></p>
+          <dl class="grid compact">
+            <div><dt>Selected idea</dt><dd>{{ blog_brief.selected_idea_id }}</dd></div>
+            <div><dt>Tone</dt><dd>{{ blog_brief.tone }}</dd></div>
+            <div><dt>CTA</dt><dd>{{ blog_brief.cta }}</dd></div>
+          </dl>
+          {% if blog_brief.suggested_outline %}
+            <ol>
+              {% for item in blog_brief.suggested_outline %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ol>
+          {% endif %}
+        {% endif %}
+
+        {% if repurposing_brief %}
+          <h2>Repurposing Brief For Agent 02</h2>
+          <p class="summary">{{ repurposing_brief.repurposing_focus }}</p>
+          {% if repurposing_brief.platform_direction %}
+            <table>
+              <thead><tr><th>Platform</th><th>Direction</th></tr></thead>
+              <tbody>
+                {% for item in repurposing_brief.platform_direction %}
+                  <tr><td>{{ item.platform }}</td><td>{{ item.direction }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% endif %}
+        {% endif %}
+
+        {% if package.risk_flags %}
+          <h2>Risk Flags</h2>
+          <p class="chips">
+            {% for flag in package.risk_flags %}
+              <code>{{ flag }}</code>
+            {% endfor %}
+          </p>
+        {% endif %}
+
+        {% if package.quality_notes %}
+          <h2>Quality Notes</h2>
+          <ul>{% for note in package.quality_notes %}<li>{{ note }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if quality and quality.sub_scores %}
+          <h2>Quality Report</h2>
+          <dl class="grid compact">
+            <div><dt>Passed</dt><dd>{{ quality.passed }}</dd></div>
+            <div><dt>Relevance</dt><dd>{{ quality.sub_scores.relevance_to_goal }}</dd></div>
+            <div><dt>Audience fit</dt><dd>{{ quality.sub_scores.audience_fit }}</dd></div>
+            <div><dt>Specificity</dt><dd>{{ quality.sub_scores.specificity }}</dd></div>
+            <div><dt>Downstream</dt><dd>{{ quality.sub_scores.downstream_usability }}</dd></div>
+            <div><dt>Risk handling</dt><dd>{{ quality.sub_scores.risk_handling }}</dd></div>
+          </dl>
+          {% if quality.hard_fails %}
+            <h3>Hard-Fails</h3>
+            <ul>
+              {% for fail in quality.hard_fails %}
+                <li><strong>{{ fail.code }}</strong>: {{ fail.reason }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endif %}
+
+        {% if package.cost and package.cost.stage_costs %}
+          <h2>Cost Summary</h2>
+          <table>
+            <thead><tr><th>Stage</th><th>Tier</th><th>Prompt</th><th>Completion</th><th>INR</th></tr></thead>
+            <tbody>
+              {% for stage in package.cost.stage_costs %}
+                <tr>
+                  <td>{{ stage.stage }}</td>
+                  <td>{{ stage.tier }}</td>
+                  <td>{{ stage.tokens_prompt }}</td>
+                  <td>{{ stage.tokens_completion }}</td>
+                  <td>Rs {{ "%.4f"|format(stage.cost_inr) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

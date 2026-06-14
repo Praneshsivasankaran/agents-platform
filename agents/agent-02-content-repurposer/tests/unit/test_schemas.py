@@ -4,6 +4,7 @@ import pytest
 
 from agent.schemas import (
     Agent02Request,
+    Agent03RepurposingBrief,
     CostUsage,
     HardFail,
     PlatformScore,
@@ -68,6 +69,49 @@ def test_request_defaults_to_core_platforms_and_adds_newsletter_when_enabled() -
         "short_video",
         "newsletter",
     )
+
+
+def test_agent03_repurposing_brief_accepts_aliases_and_platform_maps() -> None:
+    brief = Agent03RepurposingBrief.model_validate({
+        "core_campaign_message": "Keep the campaign message consistent.",
+        "target_audience": "B2B marketing leads",
+        "platform_recommendations": ["linkedin", "newsletter"],
+        "platform_specific_direction": {
+            "linkedin": "Use an executive point of view.",
+            "newsletter": "Use a concise editor note.",
+        },
+        "hooks": {"linkedin": "Turn one article into a campaign system."},
+        "cta_direction": "Read the full guide before planning.",
+        "content_pillars": "workflow, governance",
+        "message_guardrails": ["Do not invent benchmarks."],
+        "risk_flags": ["unsupported_claims"],
+    })
+
+    assert brief.core_message == "Keep the campaign message consistent."
+    assert brief.recommended_platforms == ("linkedin", "newsletter")
+    assert len(brief.platform_direction) == 2
+    assert brief.hooks == ("linkedin: Turn one article into a campaign system.",)
+    assert brief.cta == "Read the full guide before planning."
+    assert brief.content_pillars == ("workflow", "governance")
+    assert brief.message_guardrails == ("Do not invent benchmarks.",)
+    assert brief.risk_flags == ("unsupported_claims",)
+
+
+def test_agent03_repurposing_brief_requires_strategy_guidance() -> None:
+    with pytest.raises(ValueError, match="strategy guidance"):
+        Agent03RepurposingBrief.model_validate({"risk_flags": ["unsupported_claims"]})
+
+
+def test_request_uses_agent03_platform_recommendations_when_no_targets() -> None:
+    request = Agent02Request(
+        source=SourceContent(source_type="raw_article_text", full_text=" ".join(["content"] * 90)),
+        repurposing_brief_from_agent_03={
+            "core_campaign_message": "Repurpose the approved source.",
+            "platform_recommendations": ("linkedin", "newsletter"),
+        },
+    )
+
+    assert selected_platforms(request) == ("linkedin", "newsletter")
 
 
 def test_cost_usage_total_must_match_ledger() -> None:

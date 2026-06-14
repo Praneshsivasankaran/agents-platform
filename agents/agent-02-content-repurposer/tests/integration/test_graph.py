@@ -105,6 +105,29 @@ def _graph_input(body: str | None = None) -> dict:
     }
 
 
+def _agent03_repurposing_brief() -> dict[str, Any]:
+    return {
+        "core_campaign_message": "Turn approved long-form content into a consistent campaign.",
+        "target_audience": "demand generation leads",
+        "platform_recommendations": ["linkedin", "newsletter"],
+        "platform_specific_direction": {
+            "linkedin": "Use an executive point of view.",
+            "newsletter": "Use a concise editor note.",
+        },
+        "hooks": {
+            "linkedin": "Turn one approved article into a campaign system.",
+            "newsletter": "A source-backed note for next week's planning.",
+        },
+        "cta_direction": "Read the source-backed guide before planning.",
+        "content_pillars": ["workflow", "message consistency"],
+        "tone_rules": ["clear", "practical"],
+        "message_guardrails": ["Do not invent benchmarks, 97% growth, or guaranteed ROI."],
+        "repurposing_focus": "campaign consistency",
+        "what_should_stay_consistent": "approved source content is the factual anchor",
+        "risk_flags": ["unsupported_claims"],
+    }
+
+
 def _invoke(raw_input: dict | str, cfg: dict | None = None, llm: LLMProvider | None = None):
     graph = build_graph(cfg or copy.deepcopy(_CFG), llm or MockLLMProvider("pass"), _tel())
     return graph.invoke({"raw_input": raw_input})["final_output"]
@@ -185,6 +208,31 @@ def test_pass_path_returns_review_ready_package() -> None:
     assert package.hard_fails == ()
     assert package.output_package_uri is None
     assert "No publishing or external write action" in package.notes
+
+
+def test_raw_long_form_text_input_still_works() -> None:
+    package = _invoke(_source_body())
+
+    assert package.status == "pass"
+    assert package.platform_outputs
+    assert package.quality_report is not None
+
+
+def test_source_plus_agent03_repurposing_brief_works() -> None:
+    raw_input = _graph_input()
+    raw_input.pop("target_platforms")
+    raw_input.pop("cta")
+    raw_input["repurposing_brief_from_agent_03"] = _agent03_repurposing_brief()
+
+    package = _invoke(raw_input, llm=TextOnlyLLM("pass"))
+
+    assert package.status == "pass"
+    assert {draft.platform for draft in package.platform_outputs} == {"linkedin", "newsletter"}
+    assert all(draft.cta == "Read the source-backed guide before planning." for draft in package.platform_outputs)
+    assert all("unsupported_claims" in draft.risk_flags for draft in package.platform_outputs)
+    assert all("approved source content is the factual anchor" in draft.usage_notes for draft in package.platform_outputs)
+    assert "97%" not in _draft_text_blob(package)
+    assert "guaranteed roi" not in _draft_text_blob(package)
 
 
 def test_thin_source_routes_to_needs_more_input() -> None:

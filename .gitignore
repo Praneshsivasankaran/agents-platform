@@ -44,3 +44,5 @@ apps/blog-ui/uploads/*
 apps/agent-02-ui/runs/*.json
 !apps/agent-02-ui/runs/.gitkeep
 apps/agent-02-ui/uvicorn.*.log
+apps/agent-03-ui/runs/*.json
+!apps/agent-03-ui/runs/.gitkeep

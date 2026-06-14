@@ -97,6 +97,10 @@ def make_normalize_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
         raw_input: str = state.get("raw_input", "")  # type: ignore[assignment]
         content_to_normalize: str = transcript if transcript else raw_input
 
+        if state.get("blog_brief_from_agent_03") is not None:
+            tel.log("normalize.agent03_blog_brief")
+            return {"normalized_content": content_to_normalize.strip()}
+
         if _looks_like_command_only_request(content_to_normalize):
             thin_reason = _command_only_thin_reason()
             tel.log("normalize.command_only_input")

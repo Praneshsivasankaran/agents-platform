@@ -16,7 +16,7 @@ error_context    → error_state
 from __future__ import annotations
 import operator
 from typing import Annotated, Any, TypedDict
-from .schemas import BlogPackage, BlogPlan, ExtractedIdeas, QualityReport, StageCost
+from .schemas import Agent03BlogBrief, BlogPackage, BlogPlan, ExtractedIdeas, QualityReport, StageCost
 
 
 class BlogState(TypedDict, total=False):
@@ -24,6 +24,7 @@ class BlogState(TypedDict, total=False):
     raw_input: str
     input_type: str               # "text" | "voice" | "video"
     writing_prefs: dict[str, Any] # unused placeholder in v1
+    blog_brief_from_agent_03: Agent03BlogBrief
 
     # ---- media / transcription (Increment 6) ------------------------------------
     audio_ref: str                # set by extract_audio (video only); local path to WAV

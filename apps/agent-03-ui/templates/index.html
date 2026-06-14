@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 03 Content Ideation UI</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="page">
+      <section class="panel">
+        <p class="eyebrow">Agent 03</p>
+        <h1>Content ideation package</h1>
+        <p class="muted">
+          Current provider:
+          {% if provider_mode == "mock" %}
+            <strong>offline test mode</strong>
+          {% else %}
+            <strong>GCP live</strong>
+          {% endif %}
+        </p>
+        {% if missing_gcp_env %}
+          <p class="notice">
+            GCP live mode is missing VERTEX_AI_PROJECT and Google ADC.
+          </p>
+        {% endif %}
+
+        <form action="/runs" method="post" class="form" id="agent03-run-form">
+          <label>
+            Campaign goal
+            <input name="campaign_goal" type="text" placeholder="Build awareness for a new AI planning product">
+          </label>
+
+          <div class="field-row">
+            <label>
+              Product/service
+              <input name="product_or_service" type="text" placeholder="ContentIQ">
+            </label>
+            <label>
+              Industry
+              <input name="industry" type="text" placeholder="B2B SaaS">
+            </label>
+          </div>
+
+          <label>
+            Target audience
+            <input name="target_audience" type="text" placeholder="B2B marketing managers at growing SaaS companies">
+          </label>
+
+          <div class="field-row">
+            <label>
+              Brand tone
+              <select name="brand_tone_preset">
+                <option value="clear, practical, confident">Clear, practical, confident</option>
+                <option value="warm, expert, credible">Warm, expert, credible</option>
+                <option value="direct, concise, strategic">Direct, concise, strategic</option>
+                <option value="careful, educational, trustworthy">Careful, educational, trustworthy</option>
+              </select>
+            </label>
+            <label>
+              Custom tone
+              <input name="brand_tone_custom" type="text" placeholder="Optional">
+            </label>
+          </div>
+
+          <label>
+            Key message
+            <textarea name="key_message" rows="3" placeholder="AI agents turn campaign context into structured content ideas faster."></textarea>
+          </label>
+
+          <label>
+            Optional keywords
+            <textarea name="optional_keywords" rows="2" placeholder="content planning, AI agents, campaign strategy"></textarea>
+          </label>
+
+          <label>
+            Optional notes
+            <textarea name="optional_notes" rows="4" placeholder="Audience context, positioning notes, existing campaign thoughts"></textarea>
+          </label>
+
+          <label>
+            Constraints/things to avoid
+            <textarea name="optional_constraints" rows="3" placeholder="Avoid unsupported percentage claims, avoid heavy jargon"></textarea>
+          </label>
+
+          <fieldset>
+            <legend>Preferred formats</legend>
+            <label class="check"><input type="checkbox" name="optional_content_type_preference" value="Blog" checked> Blog</label>
+            <label class="check"><input type="checkbox" name="optional_content_type_preference" value="LinkedIn post" checked> LinkedIn post</label>
+            <label class="check"><input type="checkbox" name="optional_content_type_preference" value="Newsletter"> Newsletter</label>
+            <label class="check"><input type="checkbox" name="optional_content_type_preference" value="Short Video"> Short Video</label>
+            <label class="check"><input type="checkbox" name="optional_content_type_preference" value="Carousel"> Carousel</label>
+          </fieldset>
+
+          <label class="number-field">
+            Number of ideas
+            <input name="number_of_ideas" type="number" min="1" max="20" value="8">
+          </label>
+
+          <p class="progress-message" id="submit-progress" hidden>
+            Generating ideas...
+          </p>
+          <button type="submit" id="submit-button">Generate Ideas</button>
+        </form>
+      </section>
+    </main>
+    <script>
+      const form = document.getElementById("agent03-run-form");
+      const button = document.getElementById("submit-button");
+      const progress = document.getElementById("submit-progress");
+
+      form.addEventListener("submit", () => {
+        progress.hidden = false;
+        button.disabled = true;
+        button.textContent = "Generating...";
+      });
+    </script>
+  </body>
+</html>

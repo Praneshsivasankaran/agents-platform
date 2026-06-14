@@ -80,6 +80,24 @@ class _BillableErrorProvider(LLMProvider):
         raise self._error
 
 
+class _FencedDraftProvider(LLMProvider):
+    """LLMProvider that returns a draft wrapped in a Markdown code fence."""
+    name = "fenced_draft_mock"
+
+    def respond(self, messages, *, tier, params=None, tools=None, response_schema=None) -> LLMResponse:
+        usage = Usage(
+            prompt_tokens=50,
+            completion_tokens=50,
+            cost_native=0.001,
+            currency="USD",
+            synthetic=False,
+        )
+        return LLMResponse(
+            text="```markdown\n# Clean Blog Title\n\nThis is the actual blog body.\n```",
+            usage=usage,
+        )
+
+
 def _make_tel() -> StdoutTelemetry:
     tel = StdoutTelemetry(service="test")
     return tel
@@ -238,6 +256,22 @@ class TestDraftBillableError:
         err = exc_info.value
         assert err.stage_cost.cost_inr > 0
         assert err.stage_cost.stage == "draft"
+
+
+class TestDraftOutputCleanup:
+    def test_draft_strips_outer_markdown_code_fence(self):
+        """draft: provider may return fenced Markdown, but state stores raw blog Markdown."""
+        from agent.nodes.draft import make_draft_node
+
+        llm = _FencedDraftProvider()
+        tel = _make_tel()
+
+        node_fn = make_draft_node(_cfg(), llm, tel)
+        result = node_fn(_draft_state())
+
+        assert result["draft"].startswith("# Clean Blog Title")
+        assert "This is the actual blog body." in result["draft"]
+        assert "```" not in result["draft"]
 
 
 class TestReviewBillableError:

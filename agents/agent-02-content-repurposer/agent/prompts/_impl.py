@@ -69,7 +69,10 @@ def generation_prompt(
     return (
         "Generate channel-native draft content for the selected platforms. Make each platform "
         "distinct, useful, and grounded only in the source claims. Keep every draft review-ready "
-        "and never claim the content has already been published, posted, scheduled, or sent."
+        "and never claim the content has already been published, posted, scheduled, or sent. "
+        "Treat campaign context and Agent 03 strategy guidance as positioning guidance only; "
+        "the source content remains the factual base. Do not turn risk flags, message guardrails, "
+        "or unsupported campaign claims into stronger factual claims."
         + _avoid_clause(avoid_phrases)
         + "\n\nCampaign context:\n"
         + user_context_block(campaign_context)
@@ -93,7 +96,7 @@ def revision_prompt(
         "Revise the current platform drafts to fix the listed quality issues while preserving the "
         "source meaning. Keep each platform distinct and channel-native, keep claims grounded only "
         "in the source, keep drafts review-ready, and never claim the content has been published, "
-        "posted, scheduled, or sent."
+        "posted, scheduled, or sent. Preserve strategy guardrails without expanding unsupported claims."
         + _avoid_clause(avoid_phrases)
         + "\n\nQuality issues to fix:\n"
         + agent_data_block(issues)

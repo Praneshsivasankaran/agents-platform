@@ -54,10 +54,128 @@ from pydantic import Field, model_validator
 from core.interfaces.base import CoreContractModel
 
 
+def _clean_text_tuple(value: object) -> tuple[str, ...]:
+    """Coerce brief list-like fields to compact, non-blank tuples."""
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        raw_items = value.replace("\n", ",").replace(";", ",").split(",")
+    elif isinstance(value, (list, tuple, set)):
+        raw_items = list(value)
+    else:
+        raw_items = [value]
+
+    cleaned: list[str] = []
+    for item in raw_items:
+        text = str(item).strip()
+        if text and text not in cleaned:
+            cleaned.append(text)
+    return tuple(cleaned)
+
+
 class SourceNote(CoreContractModel):
     url: str | None = Field(default=None)
     title: str = Field(default="")
     snippet: str = Field(default="")
+
+
+class Agent03BlogBrief(CoreContractModel):
+    """Optional structured handoff contract accepted from Agent 03.
+
+    This schema is intentionally local to Agent 01.  It mirrors the documented
+    Agent 03 handoff fields without importing Agent 03 code, so both agents stay
+    independently deployable and cloud-neutral.
+    """
+
+    selected_idea_id: str = Field(default="")
+    selected_idea_title: str = Field(default="")
+    suggested_title: str = Field(default="")
+    title_options: tuple[str, ...] = Field(default=())
+    target_audience: str = Field(default="")
+    campaign_goal: str = Field(default="")
+    content_angle: str = Field(default="")
+    core_message: str = Field(default="")
+    pain_points: tuple[str, ...] = Field(default=())
+    value_proposition: str = Field(default="")
+    suggested_outline: tuple[str, ...] = Field(default=())
+    proof_points_or_placeholders: tuple[str, ...] = Field(default=())
+    cta: str = Field(default="")
+    tone: str = Field(default="")
+    keywords: tuple[str, ...] = Field(default=())
+    constraints: tuple[str, ...] = Field(default=())
+    risk_flags: tuple[str, ...] = Field(default=())
+    quality_notes: tuple[str, ...] = Field(default=())
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_aliases_and_lists(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        normalized = dict(data)
+        aliases = {
+            "audience_pain_points": "pain_points",
+            "brand_tone": "tone",
+            "suggested_cta": "cta",
+            "optional_keywords": "keywords",
+            "proof_points": "proof_points_or_placeholders",
+            "evidence_placeholders": "proof_points_or_placeholders",
+            "things_to_avoid": "constraints",
+            "constraints_things_to_avoid": "constraints",
+            "risk_notes": "risk_flags",
+        }
+        for alias, canonical in aliases.items():
+            if alias in normalized:
+                if canonical not in normalized:
+                    normalized[canonical] = normalized[alias]
+                normalized.pop(alias, None)
+
+        tuple_fields = (
+            "title_options",
+            "pain_points",
+            "suggested_outline",
+            "proof_points_or_placeholders",
+            "keywords",
+            "constraints",
+            "risk_flags",
+            "quality_notes",
+        )
+        for field_name in tuple_fields:
+            normalized[field_name] = _clean_text_tuple(normalized.get(field_name))
+
+        for field_name, value in list(normalized.items()):
+            if field_name not in tuple_fields and isinstance(value, str):
+                normalized[field_name] = " ".join(value.split())
+        return normalized
+
+    @model_validator(mode="after")
+    def _requires_enough_campaign_context(self):
+        has_topic = any(
+            (
+                self.selected_idea_title.strip(),
+                self.suggested_title.strip(),
+                self.core_message.strip(),
+                self.value_proposition.strip(),
+            )
+        )
+        has_context = any(
+            (
+                self.target_audience.strip(),
+                self.campaign_goal.strip(),
+                self.content_angle.strip(),
+                bool(self.suggested_outline),
+            )
+        )
+        if not has_topic:
+            raise ValueError(
+                "Agent 03 blog brief must include at least one topic signal "
+                "(selected_idea_title, suggested_title, core_message, or value_proposition)."
+            )
+        if not has_context:
+            raise ValueError(
+                "Agent 03 blog brief must include audience, campaign goal, angle, or outline context."
+            )
+        return self
 
 
 class ExtractedIdeas(CoreContractModel):
@@ -129,6 +247,12 @@ class BlogPlan(CoreContractModel):
     )
     target_word_count: int = Field(ge=100, le=5000)
     key_points: tuple[str, ...] = Field(default=())
+    campaign_goal: str = Field(default="")
+    value_proposition: str = Field(default="")
+    cta: str = Field(default="")
+    proof_points_or_placeholders: tuple[str, ...] = Field(default=())
+    constraints: tuple[str, ...] = Field(default=())
+    risk_flags: tuple[str, ...] = Field(default=())
 
     @model_validator(mode="after")
     def _non_blank_strings(self):
@@ -160,29 +284,30 @@ class BlogPlan(CoreContractModel):
 
     @model_validator(mode="after")
     def _validate_tuple_items(self):
-        """Reject blank items within title_candidates, target_keywords, and key_points.
+        """Reject blank items within plan tuple fields.
 
         Eighth repair: item-level whitespace validation for all plan tuple fields,
         consistent with how BlogEnrichment.alternative_titles / seo_keywords are validated.
         """
-        blank_tc = [t for t in self.title_candidates if not t.strip()]
-        if blank_tc:
-            raise ValueError(
-                f"BlogPlan.title_candidates contains {len(blank_tc)} blank item(s); "
-                "every headline candidate must be non-blank"
-            )
-        blank_kw = [k for k in self.target_keywords if not k.strip()]
-        if blank_kw:
-            raise ValueError(
-                f"BlogPlan.target_keywords contains {len(blank_kw)} blank item(s); "
-                "every SEO keyword must be non-blank"
-            )
-        blank_kp = [k for k in self.key_points if not k.strip()]
-        if blank_kp:
-            raise ValueError(
-                f"BlogPlan.key_points contains {len(blank_kp)} blank item(s); "
-                "every key point must be non-blank"
-            )
+        tuple_fields = (
+            ("title_candidates", self.title_candidates, "headline candidate"),
+            ("target_keywords", self.target_keywords, "SEO keyword"),
+            ("key_points", self.key_points, "key point"),
+            (
+                "proof_points_or_placeholders",
+                self.proof_points_or_placeholders,
+                "proof point or placeholder",
+            ),
+            ("constraints", self.constraints, "constraint"),
+            ("risk_flags", self.risk_flags, "risk flag"),
+        )
+        for field_name, values, item_label in tuple_fields:
+            blank = [item for item in values if not item.strip()]
+            if blank:
+                raise ValueError(
+                    f"BlogPlan.{field_name} contains {len(blank)} blank item(s); "
+                    f"every {item_label} must be non-blank"
+                )
         return self
 
     @model_validator(mode="after")

@@ -4,6 +4,7 @@ import pytest
 
 from agent.schemas import (
     Agent02Request,
+    DEFAULT_PLATFORMS,
     LLMDraftBundle,
     LLMPlatformDraft,
     PlatformDraft,
@@ -16,6 +17,7 @@ from agent.validators import (
     coerce_llm_drafts,
     cross_platform_similarity,
     draft_text,
+    generate_angles,
     hard_fail_status,
     llm_draft_usable,
     make_platform_drafts,
@@ -64,12 +66,48 @@ def _request() -> Agent02Request:
     )
 
 
+def _agent03_request() -> Agent02Request:
+    return Agent02Request(
+        source=_source(),
+        repurposing_brief_from_agent_03={
+            "core_campaign_message": "Turn approved content into a consistent campaign.",
+            "target_audience": "demand generation leads",
+            "platform_recommendations": ("linkedin", "newsletter"),
+            "platform_specific_direction": {
+                "linkedin": "Use an executive point of view.",
+                "newsletter": "Use a concise editor note.",
+            },
+            "hooks": {
+                "linkedin": "Turn one approved article into a campaign system.",
+                "newsletter": "A source-backed note for next week's planning.",
+            },
+            "cta_direction": "Read the source-backed guide before planning.",
+            "content_pillars": ("workflow", "message consistency"),
+            "tone_rules": ("clear", "practical"),
+            "message_guardrails": ("Do not invent benchmarks or customer results.",),
+            "repurposing_focus": "campaign consistency",
+            "what_should_stay_consistent": "approved source content is the factual anchor",
+            "risk_flags": ("unsupported_claims",),
+        },
+    )
+
+
 def _drafts() -> tuple[PlatformDraft, ...]:
     request = _request()
     parsed = parse_source(request.source)
     core = build_core_message(parsed)
     audience = build_audience_value(request, parsed)
     strategy = select_strategy(request, selected_platforms(request), ())
+    return make_platform_drafts(request, parsed, core, audience, strategy)
+
+
+def _agent03_drafts() -> tuple[PlatformDraft, ...]:
+    request = _agent03_request()
+    parsed = parse_source(request.source)
+    core = build_core_message(parsed)
+    audience = build_audience_value(request, parsed)
+    angles = generate_angles(parsed, selected_platforms(request), request)
+    strategy = select_strategy(request, selected_platforms(request), angles)
     return make_platform_drafts(request, parsed, core, audience, strategy)
 
 
@@ -94,6 +132,87 @@ def test_default_platform_drafts_pass_deterministic_validators() -> None:
     }
     assert all(result.passed for result in results)
     assert not any("too long" in ",".join(result.issues) for result in results)
+
+
+def test_agent03_repurposing_brief_guides_platforms_hooks_and_cta() -> None:
+    request = _agent03_request()
+    drafts = _agent03_drafts()
+
+    assert selected_platforms(request) == ("linkedin", "newsletter")
+    assert {draft.platform for draft in drafts} == {"linkedin", "newsletter"}
+    linkedin = next(draft for draft in drafts if draft.platform == "linkedin")
+    newsletter = next(draft for draft in drafts if draft.platform == "newsletter")
+    assert linkedin.hook == "Turn one approved article into a campaign system."
+    assert newsletter.hook == "A source-backed note for next week's planning."
+    assert all(draft.cta == "Read the source-backed guide before planning." for draft in drafts)
+
+
+def test_agent03_display_platform_names_map_or_skip_without_error() -> None:
+    """Agent 03 emits display names like 'X/Twitter' and 'Blog'.
+
+    Agent 02 must map the platforms it repurposes for (X/Twitter -> x_twitter) and
+    silently skip ones it does not (Blog), rather than raising and failing the run.
+    """
+    request = Agent02Request(
+        source=_source(),
+        repurposing_brief_from_agent_03={
+            "core_campaign_message": "Keep the campaign consistent.",
+            "platform_recommendations": ["Blog", "LinkedIn", "Newsletter", "Short Video", "X/Twitter"],
+        },
+    )
+
+    platforms = selected_platforms(request)
+
+    assert "x_twitter" in platforms  # "X/Twitter" with a slash is mapped
+    assert set(platforms) == {"linkedin", "newsletter", "short_video", "x_twitter"}  # "Blog" dropped
+
+
+def test_agent03_brief_with_only_unsupported_platforms_falls_back_to_defaults() -> None:
+    request = Agent02Request(
+        source=_source(),
+        repurposing_brief_from_agent_03={
+            "core_campaign_message": "Keep the campaign consistent.",
+            "platform_recommendations": ["Blog", "Podcast"],
+        },
+    )
+
+    # No mappable platform -> fall back to the default set instead of an empty/erroring run.
+    assert selected_platforms(request) == DEFAULT_PLATFORMS
+
+
+def test_agent03_message_guardrails_and_risk_flags_are_preserved() -> None:
+    drafts = _agent03_drafts()
+
+    assert all("unsupported_claims" in draft.risk_flags for draft in drafts)
+    assert all("Do not invent benchmarks" in draft.usage_notes for draft in drafts)
+    assert all("approved source content is the factual anchor" in draft.usage_notes for draft in drafts)
+
+
+def test_agent03_brief_does_not_expand_unsupported_claims() -> None:
+    request = Agent02Request(
+        source=_source(),
+        repurposing_brief_from_agent_03={
+            "core_campaign_message": "Do not claim 97% growth or guaranteed ROI.",
+            "platform_recommendations": ("linkedin",),
+            "message_guardrails": ("Do not claim 97% growth or guaranteed ROI.",),
+            "risk_flags": ("unsupported_claims",),
+            "cta_direction": "Read the approved source.",
+        },
+    )
+    parsed = parse_source(request.source)
+    core = build_core_message(parsed)
+    audience = build_audience_value(request, parsed)
+    strategy = select_strategy(
+        request,
+        selected_platforms(request),
+        generate_angles(parsed, selected_platforms(request), request),
+    )
+    drafts = make_platform_drafts(request, parsed, core, audience, strategy)
+
+    text = " ".join(draft_text(draft) for draft in drafts)
+    assert "97%" not in text
+    assert "guaranteed ROI" not in text
+    assert all("unsupported_claims" in draft.risk_flags for draft in drafts)
 
 
 def test_x_thread_validates_each_post_without_failing_joined_thread_length() -> None:

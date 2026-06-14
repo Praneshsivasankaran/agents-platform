@@ -1,0 +1,130 @@
+# Agent 03 - Content Ideation Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-03-content-ideation
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    generate_content_ideas: cheap
+    quality_scoring: cheap
+
+cost:
+  ceiling_inr: 20.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    generate_content_ideas: 8.0
+    quality_scoring: 3.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    generate_content_ideas: 4096
+    quality_scoring: 2048
+
+telemetry:
+  provider: stdout
+  service: agent-03-content-ideation
+  extra_labels:
+    # Bare span names — used as tel.span() names; must be registered labels.
+    - intake_request
+    - validate_campaign_brief
+    - analyze_audience
+    - generate_content_themes
+    - generate_content_ideas
+    - generate_hooks
+    - create_blog_brief_for_agent_01
+    - create_repurposing_brief_for_agent_02
+    - quality_scoring
+    - assemble_content_ideation_package
+    # Event codes
+    - intake_request.accepted
+    - intake_request.invalid
+    - validate_campaign_brief.complete
+    - analyze_audience.complete
+    - generate_content_themes.complete
+    - generate_content_ideas.complete
+    - generate_content_ideas.package
+    - generate_hooks.complete
+    - create_blog_brief_for_agent_01.complete
+    - create_repurposing_brief_for_agent_02.complete
+    - quality_scoring.complete
+    - assemble_content_ideation_package.complete
+    - route.decision
+    - node.error
+    - generate_content_ideas.provider_hiccup
+    - quality_scoring.provider_hiccup
+  dimensions:
+    node:
+      - intake
+      - validate_campaign_brief
+      - analyze_audience
+      - generate_content_themes
+      - generate_content_ideas
+      - generate_hooks
+      - create_blog_brief_for_agent_01
+      - create_repurposing_brief_for_agent_02
+      - quality_scoring
+      - assemble_content_ideation_package
+    tier: [cheap, strong, stt]
+    provider: [mock, litellm, gcp, bedrock, azure]
+    status: [pass, needs_more_input, needs_human, stopped_cost_ceiling, error, running]
+    decision: [ok, error, cost_ceiling, needs_more_input]
+    target:
+      - validate_campaign_brief
+      - analyze_audience
+      - generate_content_themes
+      - generate_content_ideas
+      - generate_hooks
+      - create_blog_brief_for_agent_01
+      - create_repurposing_brief_for_agent_02
+      - quality_scoring
+      - assemble_content_ideation_package
+  attr_keys:
+    - service
+    - run_id
+    - node
+    - span_id
+    - decision
+    - target
+    - status
+    - kind
+    - valid
+    - created
+    - ideas
+    - idea_count
+    - theme_count
+    - hook_count
+    - llm_ideas_used
+    - score
+  extra_metric_names:
+    - stage.cost_inr
+    - total.cost_inr
+    - quality.overall_score
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: content-ideation/
+
+output_storage:
+  enabled: false
+  prefix: content-ideation/v1/
+
+secret_store:
+  provider: env

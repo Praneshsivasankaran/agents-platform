@@ -30,6 +30,7 @@ from ..schemas import (
     ExtractedIdeas, QualityReport, StageCost,
 )
 from ..state import BlogState
+from .content_cleanup import is_markdown_fence_marker, strip_outer_markdown_fence
 
 
 def make_finalize_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
@@ -68,7 +69,8 @@ def make_finalize_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
         extracted_ideas: ExtractedIdeas | None = state.get("extracted_ideas")  # type: ignore[assignment]
         blog_plan: BlogPlan | None = state.get("blog_plan")  # type: ignore[assignment]
         quality: QualityReport | None = state.get("quality")  # type: ignore[assignment]
-        draft: str | None = state.get("draft")  # type: ignore[assignment]
+        draft_value: str | None = state.get("draft")  # type: ignore[assignment]
+        draft = strip_outer_markdown_fence(draft_value) if draft_value is not None else None
         revision_count: int = state.get("revision_count", 0)  # type: ignore[assignment]
         accumulated_flags: list[str] = state.get("hard_fail_flags", [])  # type: ignore[assignment]
         cost_gate_ok: bool = state.get("cost_gate_ok", True)  # type: ignore[assignment]
@@ -238,6 +240,8 @@ def _derive_short_summary(*, title: str, draft: str | None) -> str:
         if not stripped:
             continue
         if stripped.startswith("#"):
+            continue
+        if is_markdown_fence_marker(stripped):
             continue
         prose_lines.append(stripped)
 

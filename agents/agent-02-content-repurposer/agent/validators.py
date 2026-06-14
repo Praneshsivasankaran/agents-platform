@@ -102,7 +102,11 @@ _WEAK_CTAS = frozenset({"click here", "learn more", "read more", "check it out",
 
 
 def normalize_platform(value: str) -> Platform:
-    key = " ".join(str(value).strip().lower().replace("-", " ").replace("_", " ").split())
+    # Treat "/", "-", and "_" as separators so Agent 03 platform names such as
+    # "X/Twitter" or "Short-Video" map onto the canonical Agent 02 platform keys.
+    key = " ".join(
+        str(value).strip().lower().replace("-", " ").replace("_", " ").replace("/", " ").split()
+    )
     aliases = {
         "linkedin": "linkedin",
         "instagram": "instagram",
@@ -121,8 +125,81 @@ def normalize_platform(value: str) -> Platform:
     return aliases[key]  # type: ignore[return-value]
 
 
+def _brief_cta(request: Agent02Request) -> str:
+    brief = request.repurposing_brief_from_agent_03
+    return request.cta.strip() or (brief.cta.strip() if brief and brief.cta.strip() else "")
+
+
+def _brief_direction_for_platform(request: Agent02Request, platform: Platform) -> str:
+    brief = request.repurposing_brief_from_agent_03
+    if brief is None:
+        return ""
+    fallback = ""
+    for item in brief.platform_direction:
+        if not item.platform.strip():
+            fallback = item.direction
+            continue
+        try:
+            if normalize_platform(item.platform) == platform:
+                return item.direction
+        except ValueError:
+            continue
+    return fallback
+
+
+def _brief_hook_for_platform(request: Agent02Request, platform: Platform) -> str:
+    brief = request.repurposing_brief_from_agent_03
+    if brief is None:
+        return ""
+    fallback = ""
+    for hook in brief.hooks:
+        if ":" not in hook:
+            fallback = fallback or hook
+            continue
+        prefix, value = hook.split(":", 1)
+        try:
+            if normalize_platform(prefix) == platform and value.strip():
+                return value.strip()
+        except ValueError:
+            continue
+    return fallback
+
+
+def _brief_usage_suffix(request: Agent02Request, platform: Platform) -> str:
+    brief = request.repurposing_brief_from_agent_03
+    if brief is None:
+        return ""
+    notes: list[str] = []
+    direction = _brief_direction_for_platform(request, platform)
+    if direction:
+        notes.append(f"Agent 03 platform direction: {direction}")
+    if brief.consistent_message:
+        notes.append(f"Keep consistent campaign message: {brief.consistent_message}")
+    if brief.tone_rules:
+        notes.append("Tone rules: " + "; ".join(brief.tone_rules))
+    if brief.message_guardrails:
+        notes.append("Message guardrails: " + "; ".join(brief.message_guardrails))
+    if brief.risk_flags:
+        notes.append("Risk flags: " + "; ".join(brief.risk_flags))
+    if brief.quality_notes:
+        notes.append("Quality notes: " + "; ".join(brief.quality_notes))
+    return "" if not notes else " " + " ".join(notes)
+
+
 def selected_platforms(request: Agent02Request) -> tuple[Platform, ...]:
-    platforms = tuple(dict.fromkeys(request.target_platforms or DEFAULT_PLATFORMS))
+    brief = request.repurposing_brief_from_agent_03
+    recommended: tuple[Platform, ...] = ()
+    if brief is not None and brief.recommended_platforms:
+        # Agent 03 may recommend platforms Agent 02 does not repurpose for (e.g. "Blog").
+        # Map the ones we support and skip the rest instead of failing the whole run.
+        mapped: list[Platform] = []
+        for item in brief.recommended_platforms:
+            try:
+                mapped.append(normalize_platform(item))
+            except ValueError:
+                continue
+        recommended = tuple(dict.fromkeys(mapped))
+    platforms = tuple(dict.fromkeys(request.target_platforms or recommended or DEFAULT_PLATFORMS))
     if request.include_newsletter and "newsletter" not in platforms:
         platforms = platforms + ("newsletter",)
     return platforms
@@ -195,9 +272,17 @@ def build_core_message(parsed: ParsedSource) -> CoreMessage:
 
 
 def build_audience_value(request: Agent02Request, parsed: ParsedSource) -> AudienceValue:
-    audience = request.audience.strip() or parsed.audience_hint or "target readers"
+    brief = request.repurposing_brief_from_agent_03
+    audience = (
+        request.audience.strip()
+        or (brief.target_audience.strip() if brief else "")
+        or parsed.audience_hint
+        or "target readers"
+    )
     takeaways = tuple(claim.text for claim in parsed.source_claims[:3])
     pain = ("too much long-form content stays underused", "teams need channel-specific drafts")
+    if brief and brief.content_pillars:
+        pain = brief.content_pillars[:3]
     return AudienceValue(
         audience=audience,
         pain_points=pain,
@@ -206,10 +291,15 @@ def build_audience_value(request: Agent02Request, parsed: ParsedSource) -> Audie
     )
 
 
-def generate_angles(parsed: ParsedSource, platforms: tuple[Platform, ...]) -> tuple[ContentAngle, ...]:
+def generate_angles(
+    parsed: ParsedSource,
+    platforms: tuple[Platform, ...],
+    request: Agent02Request | None = None,
+) -> tuple[ContentAngle, ...]:
+    brief = request.repurposing_brief_from_agent_03 if request else None
     insight = parsed.source_claims[0].text if parsed.source_claims else parsed.summary
     practical = parsed.source_claims[1].text if len(parsed.source_claims) > 1 else parsed.summary
-    return (
+    angles: list[ContentAngle] = [
         ContentAngle(
             angle_id="insight",
             title="Lead with the strongest insight",
@@ -228,7 +318,27 @@ def generate_angles(parsed: ParsedSource, platforms: tuple[Platform, ...]) -> tu
             platform_fit=platforms,
             rationale="Connect the source message to a review-ready CTA.",
         ),
-    )
+    ]
+    if brief is not None:
+        for idx, pillar in enumerate(brief.content_pillars[:2], start=1):
+            angles.append(
+                ContentAngle(
+                    angle_id=f"agent03_pillar_{idx}",
+                    title=f"Agent 03 pillar: {pillar}",
+                    platform_fit=platforms,
+                    rationale=brief.repurposing_focus or pillar,
+                )
+            )
+        if brief.core_message or brief.consistent_message:
+            angles.append(
+                ContentAngle(
+                    angle_id="agent03_message",
+                    title="Keep the campaign message consistent",
+                    platform_fit=platforms,
+                    rationale=brief.consistent_message or brief.core_message,
+                )
+            )
+    return tuple(angles)
 
 
 def select_strategy(
@@ -237,7 +347,8 @@ def select_strategy(
     angles: tuple[ContentAngle, ...],
 ) -> tuple[PlatformStrategy, ...]:
     angle_cycle = tuple(a.angle_id for a in angles) or ("insight",)
-    cta = request.cta.strip() or "Read the full piece and decide what to apply next."
+    brief = request.repurposing_brief_from_agent_03
+    cta = _brief_cta(request) or "Read the full piece and decide what to apply next."
     out: list[PlatformStrategy] = []
     for idx, platform in enumerate(platforms):
         content_type = {
@@ -247,12 +358,18 @@ def select_strategy(
             "short_video": "script",
             "newsletter": "email",
         }[platform]
+        notes = f"{platform} draft should be distinct and native to the channel."
+        direction = _brief_direction_for_platform(request, platform)
+        if direction:
+            notes += f" Agent 03 direction: {direction}"
+        if brief and brief.message_guardrails:
+            notes += " Guardrails: " + "; ".join(brief.message_guardrails)
         out.append(
             PlatformStrategy(
                 platform=platform,
                 content_type=content_type,  # type: ignore[arg-type]
                 angle_id=angle_cycle[idx % len(angle_cycle)],
-                format_notes=f"{platform} draft should be distinct and native to the channel.",
+                format_notes=notes,
                 cta=cta,
             )
         )
@@ -339,15 +456,21 @@ def make_platform_drafts(
 ) -> tuple[PlatformDraft, ...]:
     claim_one = parsed.source_claims[0].text if parsed.source_claims else parsed.summary
     claim_two = parsed.source_claims[1].text if len(parsed.source_claims) > 1 else core.main_message
-    cta = request.cta.strip() or "Read the full piece before your next planning session."
+    brief = request.repurposing_brief_from_agent_03
+    cta = _brief_cta(request) or "Read the full piece before your next planning session."
+    risk_flags = brief.risk_flags if brief is not None else ()
     tags = _safe_hashtags(parsed.suggested_tags or parsed.seo_keywords)
     drafts: list[PlatformDraft] = []
     for strategy in strategies:
         if strategy.platform == "linkedin":
+            hook = (
+                _brief_hook_for_platform(request, strategy.platform)
+                or "Most teams do not need more content. They need more mileage from what already works."
+            )
             body = _fit_length(
                 "\n\n".join(
                     (
-                        "Most teams do not need more content. They need more mileage from the content already worth trusting.",
+                        hook,
                         f"The source idea: {claim_one}",
                         f"Why it matters for {audience_value.audience}: {audience_value.why_it_matters}",
                         f"Practical takeaway: {claim_two}",
@@ -362,21 +485,29 @@ def make_platform_drafts(
                 PlatformDraft(
                     platform="linkedin",
                     content_type="post",
-                    hook="Most teams do not need more content. They need more mileage from what already works.",
+                    hook=hook,
                     body=body,
                     cta=cta,
                     hashtags=tags[:5],
                     why_this_works="It turns the source into a professional point of view with a practical takeaway.",
                     audience_value=audience_value.why_it_matters,
-                    usage_notes="Review the claims and adjust brand examples before posting manually.",
+                    usage_notes=(
+                        "Review the claims and adjust brand examples before posting manually."
+                        + _brief_usage_suffix(request, strategy.platform)
+                    ),
+                    risk_flags=risk_flags,
                     quality_score=90,
                 )
             )
         elif strategy.platform == "instagram":
+            hook = (
+                _brief_hook_for_platform(request, strategy.platform)
+                or "One strong idea can become a full week of useful content."
+            )
             body = _fit_length(
                 "\n".join(
                     (
-                        "One strong idea can become a full week of useful content.",
+                        hook,
                         "",
                         "Visual angle: show the original long-form piece becoming channel-specific drafts.",
                         f"Key takeaway: {claim_one}",
@@ -393,20 +524,28 @@ def make_platform_drafts(
                 PlatformDraft(
                     platform="instagram",
                     content_type="caption",
-                    hook="One strong idea can become a full week of useful content.",
+                    hook=hook,
                     body=body,
                     cta=cta,
                     hashtags=insta_tags[: max(5, min(len(insta_tags), 12))],
                     visual_angle="Carousel: blog cover, key insight, platform adaptations, final CTA.",
                     why_this_works="It gives the reviewer a visual content angle instead of a plain summary.",
                     audience_value=audience_value.why_it_matters,
-                    usage_notes="Pair with a carousel or short reel that shows the transformation.",
+                    usage_notes=(
+                        "Pair with a carousel or short reel that shows the transformation."
+                        + _brief_usage_suffix(request, strategy.platform)
+                    ),
+                    risk_flags=risk_flags,
                     quality_score=88,
                 )
             )
         elif strategy.platform == "x_twitter":
+            hook = (
+                _brief_hook_for_platform(request, strategy.platform)
+                or "One good long-form piece should not become five copy-pasted posts."
+            )
             posts = (
-                "One good long-form piece should not become five copy-pasted posts.",
+                truncate_sentence(hook, 250),
                 f"Start with the source claim: {truncate_sentence(claim_one, 214)}",
                 f"Then translate the value for the audience: {truncate_sentence(audience_value.why_it_matters, 196)}",
                 "Each channel needs a different job: insight, visual hook, conversation starter, or quick script.",
@@ -423,13 +562,21 @@ def make_platform_drafts(
                     thread_posts=posts,
                     why_this_works="The thread turns one source into sequential ideas without repeating the same sentence.",
                     audience_value=audience_value.why_it_matters,
-                    usage_notes="Review each post manually before posting; this agent does not publish.",
+                    usage_notes=(
+                        "Review each post manually before posting; this agent does not publish."
+                        + _brief_usage_suffix(request, strategy.platform)
+                    ),
+                    risk_flags=risk_flags,
                     quality_score=87,
                 )
             )
         elif strategy.platform == "short_video":
+            hook = (
+                _brief_hook_for_platform(request, strategy.platform)
+                or "One approved article can do more than sit in the archive."
+            )
             voiceover = (
-                f"Hook: One approved article can do more than sit in the archive. "
+                f"Hook: {hook} "
                 f"Here is the useful idea: {claim_one} "
                 f"Now turn it into platform-native content with one insight, one takeaway, and one action. {cta}"
             )
@@ -437,7 +584,7 @@ def make_platform_drafts(
                 PlatformDraft(
                     platform="short_video",
                     content_type="script",
-                    hook="One approved article can do more than sit in the archive.",
+                    hook=hook,
                     body="30-60 second short-video script for human review.",
                     cta=cta,
                     scene_directions=(
@@ -450,11 +597,19 @@ def make_platform_drafts(
                     on_screen_text=("Approved blog", "Core insight", "Channel-native drafts", "Review before posting"),
                     why_this_works="It includes hook, shot flow, voiceover, on-screen text, and CTA.",
                     audience_value=audience_value.why_it_matters,
-                    usage_notes="Use as a draft script only; no video generation or publishing is performed.",
+                    usage_notes=(
+                        "Use as a draft script only; no video generation or publishing is performed."
+                        + _brief_usage_suffix(request, strategy.platform)
+                    ),
+                    risk_flags=risk_flags,
                     quality_score=89,
                 )
             )
         elif strategy.platform == "newsletter":
+            hook = (
+                _brief_hook_for_platform(request, strategy.platform)
+                or f"Why this matters: {truncate_sentence(core.main_message, 80)}"
+            )
             body = _fit_length(
                 f"{parsed.summary}\n\nThe practical reason to read the full piece: {audience_value.why_it_matters}\n\n{cta}",
                 250,
@@ -464,14 +619,18 @@ def make_platform_drafts(
                 PlatformDraft(
                     platform="newsletter",
                     content_type="email",
-                    hook=f"Why this matters: {truncate_sentence(core.main_message, 80)}",
+                    hook=hook,
                     body=body,
                     cta=cta,
                     subject_line=truncate_sentence(parsed.title or core.main_message, 70),
                     preview_text=truncate_sentence(audience_value.why_it_matters, 110),
                     why_this_works="It gives a concise click reason and keeps the original article as the anchor.",
                     audience_value=audience_value.why_it_matters,
-                    usage_notes="Optional v1 email snippet for review; no email is sent.",
+                    usage_notes=(
+                        "Optional v1 email snippet for review; no email is sent."
+                        + _brief_usage_suffix(request, strategy.platform)
+                    ),
+                    risk_flags=risk_flags,
                     quality_score=86,
                 )
             )
@@ -960,7 +1119,7 @@ def hashtag_sets(drafts: tuple[PlatformDraft, ...]) -> tuple[HashtagSet, ...]:
 
 
 def cta_options(request: Agent02Request) -> tuple[str, ...]:
-    cta = request.cta.strip() or "Read the full piece and review the next step."
+    cta = _brief_cta(request) or "Read the full piece and review the next step."
     return (
         cta,
         "Use this idea in your next content planning session.",
