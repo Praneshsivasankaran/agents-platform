@@ -10,6 +10,7 @@ from agent.quality import (
     generate_content_themes,
     generate_ctas,
     generate_hooks,
+    is_affirmative_guarantee_constraint,
     idea_risk_flags,
     normalize_campaign_context,
     recommended_platforms,
@@ -40,6 +41,35 @@ def test_risk_detection_flags_unsupported_metrics() -> None:
 
     assert "unsupported_numerical_claim" in risk_flags
     assert any(fail.code == "unsupported_numerical_claim" for fail in hard_fails)
+
+
+def test_risk_detection_does_not_treat_guarantee_prohibition_as_claim() -> None:
+    request = _request(
+        optional_constraints=[
+            "Do not invent statistics. Do not claim guaranteed ROI. Do not imply the product publishes automatically.",
+            "Keep evidence placeholders visible when proof is missing.",
+        ]
+    )
+
+    risk_flags, hard_fails = detect_request_risks(request)
+
+    assert "unsafe_marketing_claim" not in risk_flags
+    assert not any(fail.code == "unsafe_marketing_claim" for fail in hard_fails)
+
+
+def test_risk_detection_flags_affirmative_guarantee_constraint() -> None:
+    request = _request(optional_constraints=["Claim guaranteed ROI in every campaign headline."])
+
+    risk_flags, hard_fails = detect_request_risks(request)
+
+    assert "unsafe_marketing_claim" in risk_flags
+    assert any(fail.code == "unsafe_marketing_claim" for fail in hard_fails)
+
+
+def test_affirmative_guarantee_constraint_predicate_distinguishes_guardrails() -> None:
+    assert not is_affirmative_guarantee_constraint("Do not claim guaranteed ROI.")
+    assert not is_affirmative_guarantee_constraint("Avoid guarantee-style language in the draft.")
+    assert is_affirmative_guarantee_constraint("Promise guaranteed ROI in the final message.")
 
 
 def test_quality_scoring_passes_strong_package() -> None:

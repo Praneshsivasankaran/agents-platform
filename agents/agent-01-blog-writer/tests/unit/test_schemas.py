@@ -33,8 +33,10 @@ import math
 import pytest
 from pydantic import ValidationError
 
-from agent.nodes.finalize import _derive_short_summary
+from agent.nodes.finalize import _derive_short_summary, make_finalize_node
+from agent.nodes.content_cleanup import strip_outer_markdown_fence
 from agent.schemas import (
+    Agent03BlogBrief,
     BlogEnrichment,
     BlogPackage,
     BlogPlan,
@@ -56,7 +58,7 @@ from core.interfaces.base import CoreContractModel
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("cls", [
-    SourceNote, ExtractedIdeas, BlogPlan, SubScores,
+    SourceNote, Agent03BlogBrief, ExtractedIdeas, BlogPlan, SubScores,
     QualityReport, StageCost, CostUsage, BlogEnrichment, BlogPackage,
 ])
 def test_is_core_contract_model(cls):
@@ -90,6 +92,36 @@ def test_blog_plan_frozen():
 def test_source_note_rejects_unknown_field():
     with pytest.raises(ValidationError):
         SourceNote(title="t", unknown_field="oops")  # type: ignore[call-arg]
+
+
+def test_agent03_blog_brief_accepts_aliases_and_cleans_lists():
+    brief = Agent03BlogBrief.model_validate({
+        "selected_idea_title": "Buyer education series",
+        "campaign_goal": "Increase demo requests",
+        "audience_pain_points": ["Long buying cycles", "  "],
+        "brand_tone": "practical",
+        "suggested_cta": "Book a consultation",
+        "optional_keywords": "content strategy, demand generation",
+        "things_to_avoid": ["Do not promise guaranteed ROI"],
+        "risk_notes": ["unsupported_claim"],
+    })
+
+    assert brief.tone == "practical"
+    assert brief.cta == "Book a consultation"
+    assert brief.pain_points == ("Long buying cycles",)
+    assert brief.keywords == ("content strategy", "demand generation")
+    assert brief.constraints == ("Do not promise guaranteed ROI",)
+    assert brief.risk_flags == ("unsupported_claim",)
+
+
+def test_agent03_blog_brief_requires_topic_signal():
+    with pytest.raises(ValidationError, match="topic signal"):
+        Agent03BlogBrief.model_validate({"target_audience": "founders"})
+
+
+def test_agent03_blog_brief_requires_campaign_context():
+    with pytest.raises(ValidationError, match="audience"):
+        Agent03BlogBrief.model_validate({"core_message": "Improve campaign planning"})
 
 
 def test_blog_plan_rejects_unknown_field():
@@ -790,6 +822,76 @@ More text here.
     assert not summary.startswith("#")
     assert "AI Agents for Small Business" not in summary
     assert summary == "In the world of small business, time is the most precious commodity."
+
+
+def test_derive_short_summary_strips_outer_markdown_fence():
+    draft = """```markdown
+# How AI Agents Help B2B Teams Scale Content Without Losing Quality
+
+B2B marketing teams are under constant pressure to do more with less. They need practical workflows that preserve trust while increasing output.
+```"""
+
+    summary = _derive_short_summary(
+        title="How AI Agents Help B2B Teams Scale Content Without Losing Quality",
+        draft=draft,
+    )
+
+    assert "```" not in summary
+    assert not summary.lower().startswith("markdown")
+    assert summary == "B2B marketing teams are under constant pressure to do more with less."
+
+
+def test_strip_outer_markdown_fence_preserves_inner_blog_markdown():
+    draft = """```markdown
+# Title
+
+Intro paragraph.
+
+## Section
+Body text.
+```"""
+
+    cleaned = strip_outer_markdown_fence(draft)
+
+    assert cleaned.startswith("# Title")
+    assert "## Section" in cleaned
+    assert "```" not in cleaned
+
+
+def test_finalize_strips_markdown_fence_from_package_draft_and_summary():
+    from core.providers.mock.llm import MockLLMProvider
+    from core.providers.mock.telemetry import StdoutTelemetry
+
+    draft = """```markdown
+# How AI Agents Help B2B Teams Scale Content Without Losing Quality
+
+B2B marketing teams are under constant pressure to do more with less. They need practical workflows that preserve trust while increasing output.
+```"""
+    node = make_finalize_node(
+        {"cost": {"ceiling_inr": 50.0}, "graph": {"max_revision_cycles": 2}, "service": "test"},
+        MockLLMProvider(default_scenario="pass"),
+        StdoutTelemetry(service="test"),
+    )
+
+    result = node({
+        "blog_plan": _make_bp(
+            title="How AI Agents Help B2B Teams Scale Content Without Losing Quality",
+            target_keywords=("AI content marketing", "content automation"),
+        ),
+        "draft": draft,
+        "quality": _make_quality_passing(),
+        "cost_usage": [],
+        "hard_fail_flags": [],
+        "cost_gate_ok": True,
+        "revision_count": 0,
+    })
+    pkg = result["final_output"]
+
+    assert pkg.status == "pass"
+    assert pkg.full_draft.startswith("# How AI Agents")
+    assert "```" not in pkg.full_draft
+    assert "```" not in pkg.short_summary
+    assert not pkg.short_summary.lower().startswith("markdown")
 
 
 def test_derive_short_summary_falls_back_when_draft_has_only_heading():

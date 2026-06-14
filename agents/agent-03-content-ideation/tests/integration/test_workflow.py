@@ -122,6 +122,31 @@ def test_unsupported_metric_request_routes_to_needs_human_with_risk_flag() -> No
     assert any(fail.code == "unsupported_numerical_claim" for fail in package.quality_report.hard_fails)
 
 
+def test_guardrail_against_guaranteed_roi_does_not_route_to_needs_human() -> None:
+    package = _invoke(
+        valid_campaign(
+            key_message=(
+                "AI agents help marketing teams turn campaign context, briefs, and source material into "
+                "structured content ideas faster while keeping humans in control of quality and accuracy."
+            ),
+            optional_constraints=[
+                "Do not invent statistics. Do not claim guaranteed ROI. Do not imply the product publishes automatically.",
+                "Keep evidence placeholders visible when proof is missing.",
+            ],
+            optional_notes=(
+                "Focus on practical workflows, human review, quality control, and avoiding generic AI content."
+            ),
+        )
+    )
+
+    assert package.status == "pass"
+    assert "unsafe_marketing_claim" not in package.risk_flags
+    assert package.quality_report is not None
+    assert not any(fail.code == "unsafe_marketing_claim" for fail in package.quality_report.hard_fails)
+    assert package.blog_brief_for_agent_01 is not None
+    assert package.repurposing_brief_for_agent_02 is not None
+
+
 def test_llm_structured_ideas_can_be_used() -> None:
     package = _invoke(valid_campaign(number_of_ideas=4), llm=ScriptedIdeationLLM("pass"))
 

@@ -26,8 +26,77 @@ from core.interfaces import Telemetry
 from core.interfaces.errors import BillableProviderError
 from core.interfaces.llm import LLMProvider
 from ..prompts import build_system, plan_prompt
-from ..schemas import BillableNodeError, BlogPlan, ExtractedIdeas, StageCost
+from ..schemas import Agent03BlogBrief, BillableNodeError, BlogPlan, ExtractedIdeas, StageCost
 from ..state import BlogState
+
+
+def _fallback_title_from_brief(brief: Agent03BlogBrief) -> str:
+    return (
+        brief.suggested_title
+        or (brief.title_options[0] if brief.title_options else "")
+        or brief.selected_idea_title
+        or brief.core_message
+        or "Campaign blog brief"
+    )
+
+
+def _sections_from_brief(brief: Agent03BlogBrief) -> tuple[str, ...]:
+    sections = list(brief.suggested_outline[:6])
+    fallbacks = [
+        "Introduction",
+        "Audience challenge",
+        "Recommended approach",
+        "Proof points and placeholders",
+        "Next steps",
+        "Conclusion",
+    ]
+    for section in fallbacks:
+        if len(sections) >= 3:
+            break
+        if section not in sections:
+            sections.append(section)
+    return tuple(sections[:6])
+
+
+def _brief_key_points(brief: Agent03BlogBrief) -> tuple[str, ...]:
+    points: list[str] = []
+    for value in (
+        brief.core_message,
+        brief.value_proposition,
+        brief.campaign_goal,
+        brief.cta,
+    ):
+        if value and value not in points:
+            points.append(value)
+    for values in (brief.pain_points, brief.proof_points_or_placeholders, brief.constraints, brief.risk_flags):
+        for value in values:
+            if value not in points:
+                points.append(value)
+    return tuple(points)
+
+
+def _blog_plan_from_agent03_brief(brief: Agent03BlogBrief) -> BlogPlan:
+    title = _fallback_title_from_brief(brief)
+    title_candidates = brief.title_options or (title,)
+    keyword_fallback = brief.selected_idea_title or brief.core_message or title
+    target_keywords = brief.keywords or (keyword_fallback,)
+    return BlogPlan(
+        title=title,
+        title_candidates=title_candidates,
+        audience=brief.target_audience or "campaign target audience",
+        sections=_sections_from_brief(brief),
+        tone=brief.tone or "informative",
+        angle=brief.content_angle or "campaign-focused practical overview",
+        target_keywords=target_keywords,
+        target_word_count=900,
+        key_points=_brief_key_points(brief),
+        campaign_goal=brief.campaign_goal,
+        value_proposition=brief.value_proposition,
+        cta=brief.cta,
+        proof_points_or_placeholders=brief.proof_points_or_placeholders,
+        constraints=brief.constraints,
+        risk_flags=brief.risk_flags,
+    )
 
 
 def make_plan_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
@@ -49,6 +118,10 @@ def make_plan_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
     def plan(state: BlogState) -> dict[str, Any]:
         normalized_content: str = state.get("normalized_content", "")  # type: ignore[assignment]
         extracted: ExtractedIdeas = state.get("extracted_ideas")  # type: ignore[assignment]
+        blog_brief: Agent03BlogBrief | None = state.get("blog_brief_from_agent_03")  # type: ignore[assignment]
+        if blog_brief is not None:
+            tel.log("plan.agent03_blog_brief")
+            return {"blog_plan": _blog_plan_from_agent03_brief(blog_brief)}
 
         # Seventh repair: build ideas_summary from main_idea + key_points.
         if extracted and extracted.main_idea.strip():

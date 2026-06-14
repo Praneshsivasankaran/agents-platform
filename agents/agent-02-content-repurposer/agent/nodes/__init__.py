@@ -23,6 +23,7 @@ from ..prompts import (
 )
 from ..schemas import (
     Agent02Request,
+    Agent03RepurposingBrief,
     BillableNodeError,
     CostUsage,
     LLMDraftBundle,
@@ -79,6 +80,52 @@ def _normalize_platforms(value: object) -> tuple[Platform, ...]:
     return tuple(dict.fromkeys(normalize_platform(str(item)) for item in raw))
 
 
+def _append_tuple_lines(lines: list[str], label: str, values: tuple[str, ...]) -> None:
+    if values:
+        lines.append(f"{label}: " + "; ".join(values))
+
+
+def _format_repurposing_brief(brief: Agent03RepurposingBrief | None) -> str:
+    if brief is None:
+        return ""
+    lines: list[str] = ["Agent 03 repurposing strategy guidance:"]
+    scalar_fields = (
+        ("Core campaign message", brief.core_message),
+        ("Target audience", brief.target_audience),
+        ("CTA direction", brief.cta),
+        ("Repurposing focus", brief.repurposing_focus),
+        ("Consistent message", brief.consistent_message),
+    )
+    for label, value in scalar_fields:
+        if value:
+            lines.append(f"{label}: {value}")
+    _append_tuple_lines(lines, "Recommended platforms", brief.recommended_platforms)
+    if brief.platform_direction:
+        lines.append("Platform-specific direction:")
+        for item in brief.platform_direction:
+            prefix = f"{item.platform}: " if item.platform else ""
+            lines.append(f"- {prefix}{item.direction}")
+    _append_tuple_lines(lines, "Hooks", brief.hooks)
+    _append_tuple_lines(lines, "Content pillars", brief.content_pillars)
+    _append_tuple_lines(lines, "Tone rules", brief.tone_rules)
+    _append_tuple_lines(lines, "Message guardrails", brief.message_guardrails)
+    _append_tuple_lines(lines, "Risk flags", brief.risk_flags)
+    _append_tuple_lines(lines, "Quality notes", brief.quality_notes)
+    return "\n".join(lines)
+
+
+def _campaign_context(request: Agent02Request) -> str:
+    brief = request.repurposing_brief_from_agent_03
+    base = (
+        f"Audience: {request.audience or (brief.target_audience if brief else '') or 'target audience'}\n"
+        f"Brand tone: {request.brand_tone or 'professional'}\n"
+        f"Campaign goal: {request.campaign_goal or 'repurpose source content'}\n"
+        f"CTA: {request.cta or (brief.cta if brief else '') or 'Read the full piece'}"
+    )
+    brief_context = _format_repurposing_brief(brief)
+    return base if not brief_context else base + "\n\n" + brief_context
+
+
 def _request_from_state(state: Agent02State) -> Agent02Request:
     existing = state.get("request")
     if isinstance(existing, Agent02Request):
@@ -128,6 +175,7 @@ def _request_from_state(state: Agent02State) -> Agent02Request:
         "brand_tone": str(data.get("brand_tone", "") or ""),
         "campaign_goal": str(data.get("campaign_goal", "") or ""),
         "cta": str(data.get("cta", "") or ""),
+        "repurposing_brief_from_agent_03": data.get("repurposing_brief_from_agent_03"),
     }
     return Agent02Request.model_validate(request_data)
 
@@ -392,7 +440,11 @@ def make_generate_content_angles_node(cfg: dict, llm: LLMProvider, tel: Telemetr
     _ = (cfg, llm)
 
     def generate_content_angles(state: Agent02State) -> dict[str, Any]:
-        angles = generate_angles(state["parsed_source"], selected_platforms(state["request"]))
+        angles = generate_angles(
+            state["parsed_source"],
+            selected_platforms(state["request"]),
+            state["request"],
+        )
         with tel.span("generate_content_angles") as span_id:
             tel.log("generate_content_angles.complete", span_id=span_id, angle_count=len(angles))
         return {"content_angles": angles}
@@ -432,14 +484,12 @@ def make_generate_platform_drafts_node(cfg: dict, llm: LLMProvider, tel: Telemet
     def generate_platform_drafts(state: Agent02State) -> dict[str, Any]:
         request = state["request"]
         parsed = state["parsed_source"]
-        campaign = (
-            f"Audience: {request.audience or 'target audience'}\n"
-            f"Brand tone: {request.brand_tone or 'professional'}\n"
-            f"Campaign goal: {request.campaign_goal or 'repurpose source content'}\n"
-            f"CTA: {request.cta or 'Read the full piece'}"
-        )
+        campaign = _campaign_context(request)
         plan = "\n".join(
-            f"{display_platform(strategy.platform)}: {strategy.content_type}, angle={strategy.angle_id}"
+            (
+                f"{display_platform(strategy.platform)}: {strategy.content_type}, "
+                f"angle={strategy.angle_id}, cta={strategy.cta}, notes={strategy.format_notes}"
+            )
             for strategy in state["platform_strategy"]
         )
         messages = [

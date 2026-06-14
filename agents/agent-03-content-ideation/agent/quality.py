@@ -38,6 +38,19 @@ _UNSUPPORTED_NUMBER_RE = re.compile(
     r"[^.\n]{0,80}\b\d+(?:\.\d+)?\s?%|\b\d+x\b",
     re.IGNORECASE,
 )
+_GUARANTEE_CLAIM_RE = re.compile(
+    r"\b(?:guarantee(?:d|s|ing)?|guarantee-style|promise[sd]?|ensure[sd]?)\b"
+    r"[^.\n;]{0,80}\b(?:roi|return on investment|outcome|result|growth|revenue|pipeline|success|performance)\b"
+    r"|\b(?:roi|return on investment|outcome|result|growth|revenue|pipeline|success|performance)\b"
+    r"[^.\n;]{0,80}\b(?:guarantee(?:d|s|ing)?|promise[sd]?|ensure[sd]?)\b",
+    re.IGNORECASE,
+)
+_GUARANTEE_PROHIBITION_RE = re.compile(
+    r"\b(?:do not|don't|dont|avoid|never|no|without|remove|exclude|must not|should not|cannot|can't)\b"
+    r"[^.\n;]{0,120}\b(?:guarantee(?:d|s|ing)?|guarantee-style|roi|return on investment|"
+    r"unsupported (?:claim|claims|metric|metrics|proof)|invent (?:statistics|proof|metrics))\b",
+    re.IGNORECASE,
+)
 _FAKE_RESEARCH_RE = re.compile(
     r"\b(?:latest trends|live trend|web research|scraped|seo tool|keyword volume|search volume)\b",
     re.IGNORECASE,
@@ -137,16 +150,26 @@ def detect_request_risks(request: ContentIdeationRequest) -> tuple[tuple[str, ..
                 reason="The brief contains a performance metric or guarantee that needs proof before use.",
             )
         )
-    if any("guarantee" in c.lower() for c in request.optional_constraints):
+    if any(is_affirmative_guarantee_constraint(c) for c in request.optional_constraints):
         risk_flags.append("unsafe_marketing_claim")
         hard_fails.append(
             HardFail(
                 code="unsafe_marketing_claim",
                 severity="terminal",
-                reason="The constraints include guarantee-style marketing claims that require human approval.",
+                reason="The constraints include an affirmative guarantee-style marketing claim that requires human approval.",
             )
         )
     return tuple(dict.fromkeys(risk_flags)), tuple(dedupe_hard_fails(hard_fails))
+
+
+def is_affirmative_guarantee_constraint(text: str) -> bool:
+    """Return true only for claims to make guarantees, not guardrails forbidding them."""
+    cleaned = " ".join(str(text or "").split())
+    if not cleaned:
+        return False
+    if _GUARANTEE_PROHIBITION_RE.search(cleaned):
+        return False
+    return bool(_GUARANTEE_CLAIM_RE.search(cleaned))
 
 
 def normalize_campaign_context(request: ContentIdeationRequest) -> CampaignSummary:

@@ -34,8 +34,17 @@ RUNS_DIR.mkdir(parents=True, exist_ok=True)
 
 for import_path in (REPO_ROOT / "packages", AGENT_DIR):
     import_path_s = str(import_path)
-    if import_path_s not in sys.path:
-        sys.path.insert(0, import_path_s)
+    while import_path_s in sys.path:
+        sys.path.remove(import_path_s)
+    sys.path.insert(0, import_path_s)
+
+# Test runs may already have another top-level `agent` package loaded.
+# This UI is specifically bound to Agent 02, so clear stale Agent 01 modules first.
+for module_name in [name for name in sys.modules if name == "agent" or name.startswith("agent.")]:
+    module = sys.modules.get(module_name)
+    module_file = str(getattr(module, "__file__", ""))
+    if "agent-02-content-repurposer" not in module_file:
+        sys.modules.pop(module_name, None)
 
 from agent.graph import build_graph  # noqa: E402
 from agent.schemas import CostUsage, RepurposedContentPackage  # noqa: E402
@@ -294,6 +303,19 @@ def _validate_required(label: str, value: str) -> str:
     return cleaned
 
 
+def _optional_json_object(label: str, value: str) -> dict[str, Any] | None:
+    cleaned = (value or "").strip()
+    if not cleaned:
+        return None
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        raise UserFacingError(f"{label} must be valid JSON")
+    if not isinstance(parsed, dict):
+        raise UserFacingError(f"{label} must be a JSON object")
+    return parsed
+
+
 def _normalize_platforms(target_platforms: list[str] | None, include_newsletter: str | None) -> list[str]:
     selected = list(dict.fromkeys(target_platforms or []))
     if include_newsletter and "newsletter" not in selected:
@@ -315,6 +337,7 @@ def _build_agent_input(
     cta: str,
     target_platforms: list[str],
     include_newsletter: bool,
+    repurposing_brief_from_agent_03: str = "",
 ) -> dict[str, Any]:
     normalized_source_type = (source_type or "").strip()
     if normalized_source_type not in {"raw_article_text", "agent01_blog_package"}:
@@ -337,6 +360,9 @@ def _build_agent_input(
     }
     if source_status is None:
         payload.pop("source_status")
+    brief = _optional_json_object("Agent 03 repurposing brief", repurposing_brief_from_agent_03)
+    if brief is not None:
+        payload["repurposing_brief_from_agent_03"] = brief
     return payload
 
 
@@ -402,6 +428,7 @@ async def create_run(
     cta: str = Form(""),
     target_platforms: list[str] | None = Form(default=None),
     include_newsletter: str | None = Form(default=None),
+    repurposing_brief_from_agent_03: str = Form(""),
 ) -> RedirectResponse:
     provider_mode = _selected_provider_mode()
     run_id = uuid.uuid4().hex
@@ -419,6 +446,7 @@ async def create_run(
             cta=cta,
             target_platforms=platforms,
             include_newsletter=bool(include_newsletter),
+            repurposing_brief_from_agent_03=repurposing_brief_from_agent_03,
         )
         package_obj, generation = run_agent(raw_input, provider_mode=provider_mode)
         package = _package_to_dict(package_obj)

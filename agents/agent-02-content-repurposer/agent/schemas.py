@@ -7,7 +7,7 @@ or dicts, for any schema that can cross a provider or output boundary.
 """
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
@@ -116,6 +116,138 @@ class SourceContent(CoreContractModel):
         return self
 
 
+def _clean_text_tuple(value: object) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        raw_items = value.replace("\n", ",").replace(";", ",").split(",")
+    elif isinstance(value, (list, tuple, set)):
+        raw_items = list(value)
+    else:
+        raw_items = [value]
+    cleaned: list[str] = []
+    for item in raw_items:
+        text = str(item).strip()
+        if text and text not in cleaned:
+            cleaned.append(text)
+    return tuple(cleaned)
+
+
+class Agent03PlatformDirection(CoreContractModel):
+    platform: str = Field(default="")
+    direction: str = Field(min_length=1)
+
+
+class Agent03RepurposingBrief(CoreContractModel):
+    """Optional strategy handoff contract accepted from Agent 03.
+
+    Agent 02 keeps source content as the factual base. This brief only guides
+    platform choice, tone, hooks, CTA, and campaign-message consistency.
+    """
+
+    core_message: str = Field(default="")
+    target_audience: str = Field(default="")
+    recommended_platforms: tuple[str, ...] = ()
+    platform_direction: tuple[Agent03PlatformDirection, ...] = ()
+    hooks: tuple[str, ...] = ()
+    cta: str = Field(default="")
+    content_pillars: tuple[str, ...] = ()
+    tone_rules: tuple[str, ...] = ()
+    message_guardrails: tuple[str, ...] = ()
+    repurposing_focus: str = Field(default="")
+    consistent_message: str = Field(default="")
+    risk_flags: tuple[str, ...] = ()
+    quality_notes: tuple[str, ...] = ()
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_aliases_and_lists(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        normalized = dict(data)
+        aliases = {
+            "core_campaign_message": "core_message",
+            "platform_recommendations": "recommended_platforms",
+            "platform_specific_direction": "platform_direction",
+            "cta_direction": "cta",
+            "what_should_stay_consistent": "consistent_message",
+            "what_should_stay_consistent_across_all_platforms": "consistent_message",
+        }
+        for alias, canonical in aliases.items():
+            if alias in normalized:
+                if canonical not in normalized:
+                    normalized[canonical] = normalized[alias]
+                normalized.pop(alias, None)
+
+        tuple_fields = (
+            "recommended_platforms",
+            "hooks",
+            "content_pillars",
+            "tone_rules",
+            "message_guardrails",
+            "risk_flags",
+            "quality_notes",
+        )
+        for field_name in tuple_fields:
+            value = normalized.get(field_name)
+            if field_name == "hooks" and isinstance(value, dict):
+                normalized[field_name] = tuple(
+                    f"{platform}: {hook}".strip()
+                    for platform, hook in value.items()
+                    if str(hook).strip()
+                )
+            else:
+                normalized[field_name] = _clean_text_tuple(value)
+
+        direction = normalized.get("platform_direction")
+        if isinstance(direction, dict):
+            normalized["platform_direction"] = tuple(
+                {"platform": str(platform), "direction": str(value)}
+                for platform, value in direction.items()
+                if str(value).strip()
+            )
+        elif isinstance(direction, str):
+            normalized["platform_direction"] = (
+                {"platform": "", "direction": direction},
+            ) if direction.strip() else ()
+        elif isinstance(direction, (list, tuple)):
+            items: list[object] = []
+            for item in direction:
+                if isinstance(item, dict):
+                    items.append(item)
+                elif str(item).strip():
+                    items.append({"platform": "", "direction": str(item)})
+            normalized["platform_direction"] = tuple(items)
+        else:
+            normalized["platform_direction"] = ()
+
+        for field_name, value in list(normalized.items()):
+            if field_name not in tuple_fields and field_name != "platform_direction" and isinstance(value, str):
+                normalized[field_name] = " ".join(value.split())
+        return normalized
+
+    @model_validator(mode="after")
+    def _requires_strategy_signal(self) -> "Agent03RepurposingBrief":
+        if not any(
+            (
+                self.core_message,
+                self.target_audience,
+                self.recommended_platforms,
+                self.platform_direction,
+                self.hooks,
+                self.cta,
+                self.content_pillars,
+                self.tone_rules,
+                self.message_guardrails,
+                self.repurposing_focus,
+                self.consistent_message,
+            )
+        ):
+            raise ValueError("repurposing_brief_from_agent_03 requires strategy guidance")
+        return self
+
+
 class Agent02Request(CoreContractModel):
     source: SourceContent
     target_platforms: tuple[Platform, ...] = ()
@@ -124,6 +256,7 @@ class Agent02Request(CoreContractModel):
     brand_tone: str = Field(default="")
     campaign_goal: str = Field(default="")
     cta: str = Field(default="")
+    repurposing_brief_from_agent_03: Agent03RepurposingBrief | None = None
 
 
 class SourceClaim(CoreContractModel):
