@@ -9,6 +9,7 @@ dist/
 # Virtualenvs / tooling caches
 .venv/
 venv/
+.agent02-*-venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -40,3 +41,6 @@ apps/blog-ui/runs/*.json
 apps/blog-ui/uploads/*
 !apps/blog-ui/runs/.gitkeep
 !apps/blog-ui/uploads/.gitkeep
+apps/agent-02-ui/runs/*.json
+!apps/agent-02-ui/runs/.gitkeep
+apps/agent-02-ui/uvicorn.*.log

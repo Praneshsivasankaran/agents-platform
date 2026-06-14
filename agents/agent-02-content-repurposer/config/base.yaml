@@ -1,0 +1,162 @@
+# Agent 02 - Content Repurposing Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-02-content-repurposer
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  # Per-stage model tier. All Agent 02 LLM calls run on the cheap (flash) tier:
+  #  - generate/revise: flash returns the structured LLMDraftBundle reliably, whereas strong/pro
+  #    intermittently truncates it via variable reasoning; deterministic validators enforce every
+  #    quality gate afterward, so flash content is acceptable for v1.
+  #  - factual/review: these nodes DISCARD the LLM response (the deterministic validators decide
+  #    factual consistency and scoring), so the tier has no effect on output quality — flash is
+  #    strictly cheaper and steadier (pro's variable reasoning caused response_empty failures).
+  stage_tiers:
+    generate_platform_drafts: cheap
+    revise_weak_outputs: cheap
+    check_factual_consistency: cheap
+    review_quality: cheap
+
+cost:
+  ceiling_inr: 30.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    generate_platform_drafts: 8.0
+    check_factual_consistency: 4.0
+    review_quality: 4.0
+    revise_weak_outputs: 6.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    generate_platform_drafts: 4096
+    check_factual_consistency: 4096
+    review_quality: 4096
+    revise_weak_outputs: 4096
+
+graph:
+  max_revision_cycles: 2
+
+telemetry:
+  provider: stdout
+  service: agent-02-content-repurposer
+  extra_labels:
+    - intake
+    - validate_source
+    - parse_source
+    - extract_core_message
+    - extract_audience_value
+    - generate_content_angles
+    - select_platform_strategy
+    - load_platform_rules
+    - generate_platform_drafts
+    - validate_platform_fit
+    - check_factual_consistency
+    - usefulness_review
+    - review_quality
+    - revise_weak_outputs
+    - finalize
+    - intake.accepted
+    - validate_source.complete
+    - parse_source.complete
+    - extract_core_message.complete
+    - extract_audience_value.complete
+    - generate_content_angles.complete
+    - select_platform_strategy.complete
+    - load_platform_rules.complete
+    - generate_platform_drafts.complete
+    - validate_platform_fit.complete
+    - check_factual_consistency.complete
+    - usefulness_review.complete
+    - review_quality.complete
+    - revise_weak_outputs.complete
+    - finalize.complete
+    - output_storage.complete
+    - output_storage.error
+    - route.decision
+    - node.error
+    - generate_platform_drafts.provider_hiccup
+    - check_factual_consistency.provider_hiccup
+    - review_quality.provider_hiccup
+    - revise_weak_outputs.provider_hiccup
+  dimensions:
+    node:
+      - intake
+      - validate_source
+      - parse_source
+      - extract_core_message
+      - extract_audience_value
+      - generate_content_angles
+      - select_platform_strategy
+      - load_platform_rules
+      - generate_platform_drafts
+      - validate_platform_fit
+      - check_factual_consistency
+      - usefulness_review
+      - review_quality
+      - revise_weak_outputs
+      - finalize
+    tier: [cheap, strong, stt]
+    provider: [mock, litellm, gcp, bedrock, azure]
+    status: [pass, needs_more_input, needs_human, stopped_cost_ceiling, error, running]
+    decision: [ok, error, cost_ceiling, needs_more_input, pass, revise, needs_human, terminal_hard_fail]
+    target:
+      - validate_source
+      - parse_source
+      - extract_core_message
+      - extract_audience_value
+      - generate_content_angles
+      - select_platform_strategy
+      - load_platform_rules
+      - generate_platform_drafts
+      - validate_platform_fit
+      - check_factual_consistency
+      - usefulness_review
+      - review_quality
+      - revise_weak_outputs
+      - finalize
+    source_type: [agent01_blog_package, raw_article_text]
+  attr_keys:
+    - service
+    - run_id
+    - node
+    - span_id
+    - source_type
+    - decision
+    - target
+    - status
+    - kind
+  extra_metric_names:
+    - stage.cost_inr
+    - total.cost_inr
+    - quality.overall_score
+    - quality.usefulness
+    - revision.count
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: content-repurposer/
+
+output_storage:
+  enabled: false
+  prefix: content-repurposer/v1/
+
+secret_store:
+  provider: env

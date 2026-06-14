@@ -1,0 +1,56 @@
+# GCP / Vertex AI overlay for Agent 02. Deep-merges over base.yaml.
+
+provider: litellm
+
+llm:
+  provider: litellm
+  tier_models:
+    cheap: vertex_ai/gemini-2.5-flash
+    strong: vertex_ai/gemini-2.5-pro
+  vertex_project_secret: VERTEX_AI_PROJECT
+  vertex_location: us-central1
+
+cost:
+  is_mock: false
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  input_cost_per_token_inr:
+    cheap: 0.0000249
+    strong: 0.0001037
+  output_cost_per_token_inr:
+    cheap: 0.0002075
+    strong: 0.0008300
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  ceiling_inr: 30.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  # All Agent 02 LLM stages run on the cheap tier (gemini-2.5-flash) — see llm.stage_tiers in
+  # base.yaml. Flash returns the structured LLMDraftBundle reliably; gemini-2.5-pro intermittently
+  # truncated it (json_parse_failed) or emptied the discarded factual/review text (response_empty)
+  # via highly variable reasoning. These output ceilings give comfortable headroom for flash; the
+  # per-call cost stays bounded by authorize_call against the Rs.30 package ceiling.
+  max_output_tokens:
+    generate_platform_drafts: 16384
+    revise_weak_outputs: 16384
+    check_factual_consistency: 8192
+    review_quality: 8192
+
+object_storage:
+  provider: gcp
+  bucket_secret_key: GCS_BUCKET
+  project_secret_key: VERTEX_AI_PROJECT
+  prefix: content-repurposer/v1/
+
+output_storage:
+  enabled: true
+  prefix: content-repurposer/v1/
+
+secret_store:
+  provider: env
+
+telemetry:
+  provider: stdout
