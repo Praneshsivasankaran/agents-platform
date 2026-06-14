@@ -1,0 +1,28 @@
+# Azure AI / Azure OpenAI overlay for Agent 03. Interface-complete stub path.
+
+provider: azure
+
+llm:
+  provider: azure
+  tier_models:
+    cheap: azure/cheap-placeholder
+    strong: azure/strong-placeholder
+
+cost:
+  is_mock: false
+  ceiling_inr: 20.0
+
+object_storage:
+  provider: azure
+  bucket: content-ideation-placeholder
+  prefix: content-ideation/v1/
+
+output_storage:
+  enabled: false
+  prefix: content-ideation/v1/
+
+secret_store:
+  provider: env
+
+telemetry:
+  provider: stdout

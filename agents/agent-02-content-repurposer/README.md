@@ -36,6 +36,13 @@ Pass a serialized source and campaign request as `raw_input`.
 Default platforms are LinkedIn, Instagram, X/Twitter, and short-video script.
 Set `include_newsletter: true` to add newsletter/email.
 
+Agent 02 also accepts optional `repurposing_brief_from_agent_03` strategy
+guidance from the Content Ideation Agent. This field can provide target
+audience, recommended platforms, platform-specific direction, hooks, CTA
+direction, content pillars, tone rules, message guardrails, risk flags, and
+quality notes. The brief guides strategy only; the source article/blog remains
+the factual base for all repurposed outputs.
+
 ## How drafts are produced
 
 `generate_platform_drafts` (and the revision step) ask the `LLMProvider` for a

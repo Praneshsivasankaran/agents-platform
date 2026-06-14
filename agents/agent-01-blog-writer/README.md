@@ -1,5 +1,14 @@
 # Agent 01 — Blog Writing Agent (golden / reference agent)
 
+## Agent 03 Handoff
+
+Agent 01 still accepts the original direct text/voice/video inputs. It also accepts an
+optional `blog_brief_from_agent_03` structured field for Content Ideation handoff.
+When present, that brief becomes the primary source for audience, campaign goal,
+angle, outline, CTA, keywords, constraints, evidence placeholders, and risk flags.
+The agent does not import Agent 03 code; it validates the serialized handoff with
+a local Pydantic contract and keeps all provider calls behind existing interfaces.
+
 Converts messy multi-modal input (text, voice, video-audio) into a **review-ready blog
 package** (draft-only in v1). The reference pattern the other ~39 agents copy.
 

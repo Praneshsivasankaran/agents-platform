@@ -31,6 +31,7 @@ from core.cost import CostCeilingExceeded, authorize_call, estimate_prompt_token
 from core.interfaces import Telemetry
 from core.interfaces.errors import BillableProviderError
 from core.interfaces.llm import LLMProvider
+from .content_cleanup import strip_outer_markdown_fence
 from ..prompts import build_system, draft_prompt
 from ..schemas import BillableNodeError, BlogPlan, QualityReport, StageCost
 from ..state import BlogState
@@ -136,7 +137,7 @@ def make_draft_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
                 )
                 try:
                     tel.record_usage(response.usage, node="draft", tier="strong", span_id=span_id)
-                    body = response.text or ""
+                    body = strip_outer_markdown_fence(response.text or "")
                     tel.metric("stage.cost_inr", cost_inr, node="draft")
                     tel.metric("revision.count", new_revision_count, node="draft")
                     tel.log("draft.complete", span_id=span_id,
@@ -166,10 +167,28 @@ def _format_plan(plan: BlogPlan) -> str:
     ]
     for section in plan.sections:
         lines.append(f"  - {section}")
+    if plan.campaign_goal:
+        lines.append(f"Campaign goal: {plan.campaign_goal}")
+    if plan.value_proposition:
+        lines.append(f"Value proposition: {plan.value_proposition}")
+    if plan.cta:
+        lines.append(f"Suggested CTA: {plan.cta}")
     if plan.key_points:
         lines.append("Key points:")
         for point in plan.key_points:
             lines.append(f"  - {point}")
+    if plan.proof_points_or_placeholders:
+        lines.append("Proof points or evidence placeholders:")
+        for proof in plan.proof_points_or_placeholders:
+            lines.append(f"  - {proof}")
+    if plan.constraints:
+        lines.append("Constraints and things to avoid:")
+        for constraint in plan.constraints:
+            lines.append(f"  - {constraint}")
+    if plan.risk_flags:
+        lines.append("Risk flags:")
+        for flag in plan.risk_flags:
+            lines.append(f"  - {flag}")
     if plan.target_keywords:
         lines.append("Target keywords: " + ", ".join(plan.target_keywords))
     if plan.title_candidates:

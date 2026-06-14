@@ -21,8 +21,40 @@ from core.interfaces import Telemetry
 from core.interfaces.errors import BillableProviderError
 from core.interfaces.llm import LLMProvider
 from ..prompts import build_system, extract_ideas_prompt
-from ..schemas import BillableNodeError, ExtractedIdeas, StageCost
+from ..schemas import Agent03BlogBrief, BillableNodeError, ExtractedIdeas, StageCost
 from ..state import BlogState
+
+
+def _ideas_from_agent03_blog_brief(brief: Agent03BlogBrief) -> ExtractedIdeas:
+    main_idea = (
+        brief.core_message
+        or brief.selected_idea_title
+        or brief.suggested_title
+        or brief.value_proposition
+    )
+    key_points: list[str] = []
+    for value in (brief.value_proposition, brief.campaign_goal, brief.cta):
+        if value and value not in key_points:
+            key_points.append(value)
+    for values in (
+        brief.pain_points,
+        brief.suggested_outline,
+        brief.proof_points_or_placeholders,
+        brief.constraints,
+        brief.risk_flags,
+    ):
+        for value in values:
+            if value not in key_points:
+                key_points.append(value)
+
+    return ExtractedIdeas(
+        main_idea=main_idea,
+        key_points=tuple(key_points[:8]),
+        suggested_angle=brief.content_angle or None,
+        source_notes=(),
+        usable=True,
+        thin_reason=None,
+    )
 
 
 def make_extract_ideas_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
@@ -43,6 +75,10 @@ def make_extract_ideas_node(cfg: dict, llm: LLMProvider, tel: Telemetry):
 
     def extract_ideas(state: BlogState) -> dict[str, Any]:
         normalized_content: str = state.get("normalized_content", "")  # type: ignore[assignment]
+        blog_brief: Agent03BlogBrief | None = state.get("blog_brief_from_agent_03")  # type: ignore[assignment]
+        if blog_brief is not None:
+            tel.log("extract_ideas.agent03_blog_brief")
+            return {"extracted_ideas": _ideas_from_agent03_blog_brief(blog_brief)}
 
         # ── Build messages first, enforce prompt-size limit ───────────────────
         system = build_system(cfg)

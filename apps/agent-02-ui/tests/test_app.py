@@ -184,6 +184,7 @@ def test_form_page_loads(client):
     assert "Raw article text" in response.text
     assert "Agent 01 blog package" in response.text
     assert "Newsletter/email" in response.text
+    assert "repurposing_brief_from_agent_03" in response.text
     assert "Generating with live GCP/Vertex. This may take a few minutes." in response.text
     assert "Generating..." in response.text
 
@@ -228,6 +229,28 @@ def test_post_valid_newsletter_input_includes_newsletter(client, ui, monkeypatch
     assert record["input"]["include_newsletter"] is True
 
 
+def test_post_valid_agent03_brief_json_is_included(client, ui, monkeypatch):
+    _install_fake_live_graph(ui, monkeypatch)
+    response = client.post(
+        "/runs",
+        data=_valid_form(
+            repurposing_brief_from_agent_03=(
+                '{"core_campaign_message":"Keep the campaign consistent.",'
+                '"platform_recommendations":["linkedin","newsletter"],'
+                '"message_guardrails":["Do not invent benchmarks."]}'
+            )
+        ),
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    run_id = response.headers["location"].rsplit("/", 1)[-1]
+    record = ui._load_run(run_id)
+    brief = record["input"]["repurposing_brief_from_agent_03"]
+    assert brief["core_campaign_message"] == "Keep the campaign consistent."
+    assert brief["platform_recommendations"] == ["linkedin", "newsletter"]
+
+
 def test_post_missing_required_input_creates_safe_error_result(client, ui, monkeypatch):
     _install_fake_live_graph(ui, monkeypatch)
     response = client.post(
@@ -241,6 +264,21 @@ def test_post_missing_required_input_creates_safe_error_result(client, ui, monke
     record = ui._load_run(run_id)
     assert record["package"]["status"] == "error"
     assert "Title is required" in record["package"]["notes"]
+
+
+def test_post_invalid_agent03_brief_json_creates_safe_error_result(client, ui, monkeypatch):
+    _install_fake_live_graph(ui, monkeypatch)
+    response = client.post(
+        "/runs",
+        data=_valid_form(repurposing_brief_from_agent_03="{not-json"),
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    run_id = response.headers["location"].rsplit("/", 1)[-1]
+    record = ui._load_run(run_id)
+    assert record["package"]["status"] == "error"
+    assert "Agent 03 repurposing brief must be valid JSON" in record["package"]["notes"]
 
 
 def test_missing_live_config_returns_safe_error(client, ui, monkeypatch):

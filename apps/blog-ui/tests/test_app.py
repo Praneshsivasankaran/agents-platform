@@ -47,6 +47,7 @@ def test_form_page_loads(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "Generate Blog" in response.text
+    assert "blog_brief_from_agent_03" in response.text
     assert "offline test mode" in response.text
     assert "Provider mode" not in response.text
     assert "GCP live" not in response.text
@@ -80,6 +81,33 @@ def test_text_run_succeeds_on_mock_provider(client, ui):
     record = ui._load_run(run_id)
     assert record["input_type"] == "text"
     assert record["provider_mode"] == "mock"
+    assert record["input"]["raw_input"] == "Machine learning is changing healthcare workflows."
+    assert record["package"]["status"] in {"pass", "needs_human", "stopped_cost_ceiling", "error"}
+
+
+def test_agent03_blog_brief_json_is_included(client, ui):
+    response = client.post(
+        "/runs",
+        data={
+            "input_type": "text",
+            "raw_text": "",
+            "blog_brief_from_agent_03": (
+                '{"selected_idea_title":"Why teams need campaign-level content planning",'
+                '"target_audience":"B2B marketing managers",'
+                '"campaign_goal":"Awareness",'
+                '"suggested_outline":["Open with the planning gap","Show the review workflow"],'
+                '"constraints":["Do not invent benchmark statistics."]}'
+            ),
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    run_id = response.headers["location"].rsplit("/", 1)[-1]
+    record = ui._load_run(run_id)
+    brief = record["input"]["blog_brief_from_agent_03"]
+    assert brief["selected_idea_title"] == "Why teams need campaign-level content planning"
+    assert brief["target_audience"] == "B2B marketing managers"
+    assert brief["constraints"] == ["Do not invent benchmark statistics."]
     assert record["package"]["status"] in {"pass", "needs_human", "stopped_cost_ceiling", "error"}
 
 
@@ -94,6 +122,23 @@ def test_empty_text_input_renders_error_result(client, ui):
     record = ui._load_run(run_id)
     assert record["package"]["status"] == "error"
     assert "Text input is required" in record["package"]["notes"]
+
+
+def test_invalid_agent03_blog_brief_json_renders_error_result(client, ui):
+    response = client.post(
+        "/runs",
+        data={
+            "input_type": "text",
+            "raw_text": "AI agents can help teams plan content.",
+            "blog_brief_from_agent_03": "{not-json",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    run_id = response.headers["location"].rsplit("/", 1)[-1]
+    record = ui._load_run(run_id)
+    assert record["package"]["status"] == "error"
+    assert "Agent 03 blog brief must be valid JSON" in record["package"]["notes"]
 
 
 def test_gcp_mode_without_env_renders_actionable_error(client, ui, monkeypatch):

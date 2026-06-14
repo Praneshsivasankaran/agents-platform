@@ -77,6 +77,7 @@ REUSABLE_SCAFFOLD_FILES = frozenset({
     "agent/graph.py",
     "agent/prompts/__init__.py",
     "agent/nodes/__init__.py",
+    "agent/nodes/content_cleanup.py",
     "agent/nodes/intake.py",
     "agent/nodes/finalize.py",
     "providers/__init__.py",
@@ -237,6 +238,7 @@ def _templates() -> dict[str, str]:
         "agent/graph.py": _T_GRAPH,
         "agent/prompts/__init__.py": _T_PROMPTS,
         "agent/nodes/__init__.py": _T_NODES_INIT,
+        "agent/nodes/content_cleanup.py": _T_CONTENT_CLEANUP,
         "agent/nodes/intake.py": _T_INTAKE,
         "agent/nodes/process.py": _T_PROCESS,
         "agent/nodes/finalize.py": _T_FINALIZE,
@@ -525,6 +527,53 @@ from .intake import make_intake_node
 from .process import make_process_node
 
 __all__ = ["make_intake_node", "make_process_node", "make_finalize_node"]
+'''
+
+_T_CONTENT_CLEANUP = '''\
+"""Small text cleanup helpers shared by generated agent nodes."""
+from __future__ import annotations
+
+
+def strip_outer_markdown_fence(text: str) -> str:
+    """Remove an accidental outer Markdown code fence from generated prose.
+
+    The generated result may itself be Markdown, but it should not be wrapped
+    in a Markdown code block. Some providers occasionally return:
+
+    ```markdown
+    # Title
+    ...
+    ```
+
+    This helper removes only that outer wrapper and leaves the inner Markdown
+    intact.
+    """
+    cleaned = (text or "").strip()
+
+    while True:
+        lines = cleaned.splitlines()
+        if len(lines) < 2:
+            return cleaned
+
+        opening = lines[0].strip()
+        closing = lines[-1].strip()
+        if not (_is_markdown_fence_opening(opening) and closing == "```"):
+            return cleaned
+
+        cleaned = "\\n".join(lines[1:-1]).strip()
+
+
+def is_markdown_fence_marker(line: str) -> bool:
+    stripped = line.strip()
+    return stripped == "```" or _is_markdown_fence_opening(stripped)
+
+
+def _is_markdown_fence_opening(line: str) -> bool:
+    stripped = line.strip().lower()
+    if not stripped.startswith("```"):
+        return False
+    language = stripped[3:].strip()
+    return language in {"", "markdown", "md"}
 '''
 
 _T_INTAKE = '''\

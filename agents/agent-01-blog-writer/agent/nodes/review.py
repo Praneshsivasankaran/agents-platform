@@ -235,13 +235,34 @@ def _format_plan_summary(plan: BlogPlan) -> str:
     ]
     if plan.target_keywords:
         lines.append("Target keywords: " + ", ".join(plan.target_keywords))
+    if plan.campaign_goal:
+        lines.append(f"Campaign goal: {plan.campaign_goal}")
+    if plan.value_proposition:
+        lines.append(f"Value proposition: {plan.value_proposition}")
+    if plan.cta:
+        lines.append(f"Suggested CTA: {plan.cta}")
+    if plan.proof_points_or_placeholders:
+        lines.append("Proof points or evidence placeholders: " + "; ".join(plan.proof_points_or_placeholders))
+    if plan.constraints:
+        lines.append("Constraints and things to avoid: " + "; ".join(plan.constraints))
+    if plan.risk_flags:
+        lines.append("Risk flags: " + "; ".join(plan.risk_flags))
     return "\n".join(lines)
 
 
 def _format_key_points(plan: BlogPlan) -> str:
-    if not plan.key_points:
+    lines = [f"- {p}" for p in plan.key_points]
+    for label, values in (
+        ("Proof placeholders", plan.proof_points_or_placeholders),
+        ("Constraints", plan.constraints),
+        ("Risk flags", plan.risk_flags),
+    ):
+        if values:
+            lines.append(f"{label}:")
+            lines.extend(f"- {value}" for value in values)
+    if not lines:
         return "(not specified)"
-    return "\n".join(f"- {p}" for p in plan.key_points)
+    return "\n".join(lines)
 
 
 def _format_extracted_ideas(extracted: ExtractedIdeas) -> str:

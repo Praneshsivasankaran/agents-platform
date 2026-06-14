@@ -34,7 +34,7 @@ from typing import Any
 
 import pytest
 
-from core.interfaces import BillableProviderError, LLMProvider, LLMResponse, Telemetry
+from core.interfaces import BillableProviderError, LLMProvider, LLMResponse
 from core.interfaces.llm import Tier
 from core.interfaces.usage import Usage
 from core.providers.mock.llm import (
@@ -132,6 +132,28 @@ class CountingProvider(LLMProvider):
 # HighCostMockProvider — reports non-zero cost per call (for cost tests)
 # ---------------------------------------------------------------------------
 
+class RecordingMockProvider(MockLLMProvider):
+    """Mock provider that records every call for prompt-context assertions."""
+
+    def __init__(self, default_scenario: str = "pass"):
+        super().__init__(default_scenario=default_scenario)
+        self.calls: list[dict[str, Any]] = []
+
+    def respond(self, messages, *, tier, params=None, tools=None, response_schema=None):
+        self.calls.append({
+            "messages": messages,
+            "tier": tier,
+            "response_schema": response_schema,
+        })
+        return super().respond(
+            messages,
+            tier=tier,
+            params=params,
+            tools=tools,
+            response_schema=response_schema,
+        )
+
+
 class HighCostMockProvider(LLMProvider):
     """Provider that reports a configurable INR cost per call via Usage."""
     name = "high_cost_mock"
@@ -198,6 +220,40 @@ def _run(llm: LLMProvider, cfg: dict | None = None) -> BlogPackage:
     return result["final_output"]  # Repair: was final_package
 
 
+def _agent03_blog_brief_payload() -> dict[str, Any]:
+    return {
+        "selected_idea_title": "Reduce content planning bottlenecks",
+        "suggested_title": "How Lean Teams Can Plan Better Campaign Content",
+        "title_options": (
+            "How Lean Teams Can Plan Better Campaign Content",
+            "A Practical Guide to Campaign Content Planning",
+        ),
+        "target_audience": "B2B SaaS marketing leads",
+        "campaign_goal": "Increase qualified demo requests",
+        "content_angle": "practical planning workflow",
+        "core_message": "Structured ideation helps small teams create focused campaigns.",
+        "audience_pain_points": (
+            "Too many disconnected content ideas",
+            "Difficulty aligning content to campaign goals",
+        ),
+        "value_proposition": "A shared brief keeps every draft tied to the campaign.",
+        "suggested_outline": (
+            "Why campaign content drifts",
+            "How to align ideas to audience pain points",
+            "Where to keep evidence placeholders",
+            "How to hand off the brief",
+        ),
+        "proof_points_or_placeholders": (
+            "[Evidence needed: customer planning cycle benchmark]",
+        ),
+        "suggested_cta": "Book a content planning consultation",
+        "brand_tone": "clear and practical",
+        "optional_keywords": ("campaign content planning", "content ideation"),
+        "constraints": ("Do not promise guaranteed ROI.",),
+        "risk_flags": ("unsupported_claim",),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Test 1: Pass path
 # ---------------------------------------------------------------------------
@@ -229,6 +285,57 @@ def test_pass_path():
     assert pkg.seo_keywords, "seo_keywords must be non-empty for 'pass'"
     assert pkg.suggested_tags, "suggested_tags must be non-empty for 'pass' (sixth repair)"
     assert pkg.meta_description, "meta_description must be non-empty for 'pass'"
+
+
+def test_agent03_blog_brief_input_works():
+    """Agent 03 blog brief can drive Agent 01 without direct raw blog input."""
+    llm = RecordingMockProvider(default_scenario="pass")
+    graph = build_graph(_cfg(), llm, CapturingTelemetry())
+
+    pkg: BlogPackage = graph.invoke({
+        "blog_brief_from_agent_03": _agent03_blog_brief_payload(),
+    })["final_output"]
+
+    assert pkg.status == "pass"
+    assert pkg.title is not None
+    stage_names = [stage.stage for stage in pkg.cost.stage_costs]
+    assert "draft" in stage_names
+    assert "review" in stage_names
+    assert "normalize" not in stage_names
+    assert "extract_ideas" not in stage_names
+    assert "plan" not in stage_names
+
+
+def test_agent03_blog_brief_prompt_respects_risk_flags_and_placeholders():
+    """Brief guardrails reach the draft prompt without becoming stronger claims."""
+    llm = RecordingMockProvider(default_scenario="pass")
+    graph = build_graph(_cfg(), llm, CapturingTelemetry())
+
+    pkg: BlogPackage = graph.invoke({
+        "blog_brief_from_agent_03": _agent03_blog_brief_payload(),
+    })["final_output"]
+
+    draft_calls = [call for call in llm.calls if call["response_schema"] is None]
+    assert draft_calls
+    draft_prompt_text = draft_calls[0]["messages"][1]["content"]
+    assert "unsupported_claim" in draft_prompt_text
+    assert "[Evidence needed: customer planning cycle benchmark]" in draft_prompt_text
+    assert "Do not promise guaranteed ROI." in draft_prompt_text
+    assert "do not strengthen unsupported claims" in draft_prompt_text
+    assert "guaranteed ROI" not in (pkg.full_draft or "")
+
+
+def test_invalid_agent03_blog_brief_is_handled_safely():
+    llm = CountingProvider()
+    graph = build_graph(_cfg(), llm, CapturingTelemetry())
+
+    pkg: BlogPackage = graph.invoke({
+        "blog_brief_from_agent_03": {"target_audience": "founders"},
+    })["final_output"]
+
+    assert pkg.status == "error"
+    assert llm.call_count == 0
+    assert "blog_brief_from_agent_03" in (pkg.notes or "")
 
 
 # ---------------------------------------------------------------------------
@@ -741,7 +848,6 @@ def test_span_exit_failure_preserves_cost_in_ledger():
     The LLM call itself succeeds (stage_cost is created); then span.__exit__ raises.
     Expected: status='error', review cost in ledger, total_inr > 0.
     """
-    from core.providers.mock.llm import MockLLMProvider as _Mock
     llm = HighCostMockProvider(cost_per_call_inr=5.0)
     tel = SpanExitRaisingTelemetry(raise_on_node="review")
 

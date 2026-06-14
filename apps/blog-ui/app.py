@@ -33,8 +33,17 @@ for path in (RUNS_DIR, UPLOADS_DIR):
 
 for import_path in (REPO_ROOT / "packages", AGENT_DIR):
     import_path_s = str(import_path)
-    if import_path_s not in sys.path:
-        sys.path.insert(0, import_path_s)
+    while import_path_s in sys.path:
+        sys.path.remove(import_path_s)
+    sys.path.insert(0, import_path_s)
+
+# Test runs may already have another top-level `agent` package loaded.
+# This UI is specifically bound to Agent 01, so clear stale modules first.
+for module_name in [name for name in sys.modules if name == "agent" or name.startswith("agent.")]:
+    module = sys.modules.get(module_name)
+    module_file = str(getattr(module, "__file__", ""))
+    if "agent-01-blog-writer" not in module_file:
+        sys.modules.pop(module_name, None)
 
 from agent.graph import build_graph  # noqa: E402
 from agent.schemas import BlogPackage  # noqa: E402
@@ -152,12 +161,42 @@ def _require_gcp_live_env() -> None:
         )
 
 
-def run_agent(input_type: str, raw_input: str, *, provider_mode: str = "mock") -> BlogPackage:
+def _optional_json_object(label: str, value: str) -> dict[str, Any] | None:
+    cleaned = (value or "").strip()
+    if not cleaned:
+        return None
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        raise UserFacingError(f"{label} must be valid JSON")
+    if not isinstance(parsed, dict):
+        raise UserFacingError(f"{label} must be a JSON object")
+    return parsed
+
+
+def _agent_payload(
+    input_type: str,
+    raw_input: str,
+    blog_brief_from_agent_03: dict[str, Any] | None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"raw_input": raw_input, "input_type": input_type}
+    if blog_brief_from_agent_03 is not None:
+        payload["blog_brief_from_agent_03"] = blog_brief_from_agent_03
+    return payload
+
+
+def run_agent(
+    input_type: str,
+    raw_input: str,
+    *,
+    provider_mode: str = "mock",
+    blog_brief_from_agent_03: dict[str, Any] | None = None,
+) -> BlogPackage:
     if provider_mode == "gcp":
         _require_gcp_live_env()
     cfg = load_agent_config(provider_mode)
     graph = _build_graph_from_config(cfg)
-    result = graph.invoke({"raw_input": raw_input, "input_type": input_type})
+    result = graph.invoke(_agent_payload(input_type, raw_input, blog_brief_from_agent_03))
     return result["final_output"]
 
 
@@ -195,6 +234,7 @@ def index(request: Request) -> HTMLResponse:
 async def create_run(
     input_type: str = Form("text"),
     raw_text: str = Form(""),
+    blog_brief_from_agent_03: str = Form(""),
     upload: UploadFile | None = File(default=None),
 ) -> RedirectResponse:
     normalized_type = (input_type or "text").strip().lower()
@@ -204,10 +244,13 @@ async def create_run(
 
     run_id = uuid.uuid4().hex
     upload_path: Path | None = None
+    raw_input = ""
+    agent_input: dict[str, Any] = {}
     try:
+        blog_brief = _optional_json_object("Agent 03 blog brief", blog_brief_from_agent_03)
         if normalized_type == "text":
             raw_input = (raw_text or "").strip()
-            if not raw_input:
+            if not raw_input and blog_brief is None:
                 raise UserFacingError("Text input is required")
         else:
             if upload is None or not upload.filename:
@@ -215,7 +258,15 @@ async def create_run(
             upload_path = await _store_upload(upload, normalized_type, run_id)
             raw_input = str(upload_path)
 
-        package = _package_to_dict(run_agent(normalized_type, raw_input, provider_mode=provider_mode))
+        agent_input = _agent_payload(normalized_type, raw_input, blog_brief)
+        package = _package_to_dict(
+            run_agent(
+                normalized_type,
+                raw_input,
+                provider_mode=provider_mode,
+                blog_brief_from_agent_03=blog_brief,
+            )
+        )
     except UserFacingError as exc:
         package = _serializable_error(str(exc))
     except Exception as exc:
@@ -238,6 +289,7 @@ async def create_run(
         "created_at": datetime.now(timezone.utc).isoformat(),
         "input_type": normalized_type,
         "provider_mode": provider_mode,
+        "input": agent_input,
         "package": package,
     }
     _save_run(record)
