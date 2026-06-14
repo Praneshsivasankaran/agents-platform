@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 02 Run {{ record.run_id }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="page wide">
+      <p><a href="/">New run</a></p>
+
+      <section class="panel">
+        <p class="eyebrow">Run {{ record.run_id }}</p>
+        <h1>Repurposed content package</h1>
+        <div class="status status-{{ package.status }}">{{ package.status }}</div>
+
+        {% if package.notes %}
+          <p class="notice">{{ package.notes }}</p>
+        {% endif %}
+
+        {% if package.status == "needs_human" %}
+          <div class="quality-gate">
+            <strong>The agent completed successfully, but human review is required before use.</strong>
+            {% if hard_fail_codes %}
+              <p>
+                Reasons:
+                {% for code in hard_fail_codes %}
+                  <code>{{ code }}</code>
+                {% endfor %}
+              </p>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <dl class="grid">
+          <div><dt>Source type</dt><dd>{{ record.source_type }}</dd></div>
+          <div><dt>Provider</dt><dd>{{ record.provider_mode }}</dd></div>
+          <div><dt>Total cost</dt><dd>Rs {{ "%.4f"|format(package.cost.total_inr if package.cost else 0) }}</dd></div>
+          <div><dt>Quality score</dt><dd>{{ quality.overall_score if quality else "n/a" }}</dd></div>
+          <div><dt>LLM drafts used</dt><dd>{{ generation.llm_drafts_used if generation.llm_drafts_used is not none else "n/a" }}</dd></div>
+          <div><dt>Fallback happened</dt><dd>{{ generation.fell_back if generation.fell_back is not none else "n/a" }}</dd></div>
+        </dl>
+
+        {% if package.source_summary %}
+          <h2>Source Summary</h2>
+          <p class="summary">{{ package.source_summary }}</p>
+        {% endif %}
+
+        {% if package.content_brief %}
+          <h2>Content Brief</h2>
+          <p class="summary">{{ package.content_brief }}</p>
+        {% endif %}
+
+        {% macro draft_block(title, draft) -%}
+          {% if draft %}
+            <section class="draft-block">
+              <h2>{{ title }}</h2>
+              {% if draft.subject_line %}<p><strong>Subject:</strong> {{ draft.subject_line }}</p>{% endif %}
+              {% if draft.preview_text %}<p><strong>Preview:</strong> {{ draft.preview_text }}</p>{% endif %}
+              {% if draft.hook %}<p><strong>Hook:</strong> {{ draft.hook }}</p>{% endif %}
+              {% if draft.body %}<article class="draft">{{ draft.body }}</article>{% endif %}
+              {% if draft.thread_posts %}
+                <ol class="thread">
+                  {% for post in draft.thread_posts %}
+                    <li>{{ post }}</li>
+                  {% endfor %}
+                </ol>
+              {% endif %}
+              {% if draft.voiceover %}<p><strong>Voiceover:</strong> {{ draft.voiceover }}</p>{% endif %}
+              {% if draft.scene_directions %}
+                <ul>
+                  {% for scene in draft.scene_directions %}
+                    <li>{{ scene }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+              {% if draft.on_screen_text %}
+                <p><strong>On-screen text:</strong> {{ draft.on_screen_text|join(", ") }}</p>
+              {% endif %}
+              {% if draft.visual_angle %}<p><strong>Visual angle:</strong> {{ draft.visual_angle }}</p>{% endif %}
+              {% if draft.cta %}<p><strong>CTA:</strong> {{ draft.cta }}</p>{% endif %}
+              {% if draft.hashtags %}<p><strong>Hashtags:</strong> {{ draft.hashtags|join(" ") }}</p>{% endif %}
+              {% if draft.why_this_works %}<p><strong>Why this works:</strong> {{ draft.why_this_works }}</p>{% endif %}
+              {% if draft.audience_value %}<p><strong>Audience value:</strong> {{ draft.audience_value }}</p>{% endif %}
+              {% if draft.risk_flags %}<p><strong>Risk flags:</strong> {{ draft.risk_flags|join(", ") }}</p>{% endif %}
+            </section>
+          {% endif %}
+        {%- endmacro %}
+
+        {{ draft_block("LinkedIn Draft", outputs.linkedin) }}
+        {{ draft_block("Instagram Draft", outputs.instagram) }}
+        {{ draft_block("X/Twitter Draft", outputs.x_twitter) }}
+        {{ draft_block("Short-Video Script", outputs.short_video) }}
+        {{ draft_block("Newsletter/Email", outputs.newsletter) }}
+
+        {% if package.cta_options %}
+          <h2>CTA Options</h2>
+          <ul>{% for option in package.cta_options %}<li>{{ option }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if hashtag_sets %}
+          <h2>Hashtags</h2>
+          <table>
+            <thead><tr><th>Platform</th><th>Hashtags</th></tr></thead>
+            <tbody>
+              {% for item in hashtag_sets %}
+                <tr><td>{{ item.platform }}</td><td>{{ item.hashtags|join(" ") }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if package.hard_fails %}
+          <h2>Hard-Fails</h2>
+          <ul>
+            {% for fail in package.hard_fails %}
+              <li><strong>{{ fail.code }}</strong>{% if fail.platform %} / {{ fail.platform }}{% endif %}: {{ fail.reason }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        {% if package.improvement_suggestions %}
+          <h2>Improvement Suggestions</h2>
+          <ul>
+            {% for suggestion in package.improvement_suggestions %}
+              <li>{{ suggestion }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        {% if package.validation_report %}
+          <h2>Platform Validation</h2>
+          <table>
+            <thead><tr><th>Platform</th><th>Passed</th><th>Score</th><th>Issues</th></tr></thead>
+            <tbody>
+              {% for item in package.validation_report %}
+                <tr>
+                  <td>{{ item.platform }}</td>
+                  <td>{{ item.passed }}</td>
+                  <td>{{ item.score }}</td>
+                  <td>{{ item.issues|join("; ") }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if factual %}
+          <h2>Factual Consistency</h2>
+          <dl class="grid compact">
+            <div><dt>Passed</dt><dd>{{ factual.passed }}</dd></div>
+            <div><dt>Score</dt><dd>{{ factual.score }}</dd></div>
+            <div><dt>Changed meaning</dt><dd>{{ factual.changed_meaning }}</dd></div>
+          </dl>
+          {% if factual.unsupported_claims %}
+            <ul>
+              {% for claim in factual.unsupported_claims %}
+                <li><strong>{{ claim.code }}</strong> / {{ claim.platform }}: {{ claim.reason }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endif %}
+
+        {% if usefulness %}
+          <h2>Usefulness Review</h2>
+          <dl class="grid compact">
+            <div><dt>Passed</dt><dd>{{ usefulness.passed }}</dd></div>
+            <div><dt>Score</dt><dd>{{ usefulness.score }}</dd></div>
+            <div><dt>Generic content</dt><dd>{{ usefulness.generic_content_detected }}</dd></div>
+            <div><dt>Repeated across platforms</dt><dd>{{ usefulness.repeated_across_platforms }}</dd></div>
+          </dl>
+          {% if usefulness.issues %}
+            <ul>{% for issue in usefulness.issues %}<li>{{ issue }}</li>{% endfor %}</ul>
+          {% endif %}
+        {% endif %}
+
+        {% if quality and quality.sub_scores %}
+          <h2>Quality Report</h2>
+          <dl class="grid compact">
+            <div><dt>Overall</dt><dd>{{ quality.overall_score }}</dd></div>
+            <div><dt>Pass flag</dt><dd>{{ quality.pass_flag }}</dd></div>
+            <div><dt>Needs revision</dt><dd>{{ quality.needs_revision }}</dd></div>
+          </dl>
+        {% endif %}
+
+        {% if package.cost and package.cost.stage_costs %}
+          <h2>Cost Summary</h2>
+          <table>
+            <thead><tr><th>Stage</th><th>Tier</th><th>Prompt</th><th>Completion</th><th>INR</th></tr></thead>
+            <tbody>
+              {% for stage in package.cost.stage_costs %}
+                <tr>
+                  <td>{{ stage.stage }}</td>
+                  <td>{{ stage.tier }}</td>
+                  <td>{{ stage.tokens_prompt }}</td>
+                  <td>{{ stage.tokens_completion }}</td>
+                  <td>Rs {{ "%.4f"|format(stage.cost_inr) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if package.markdown_review_package %}
+          <h2>Markdown Review Package</h2>
+          <pre class="markdown">{{ package.markdown_review_package }}</pre>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

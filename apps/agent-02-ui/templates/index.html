@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 02 Content Repurposer UI</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="page">
+      <section class="panel">
+        <p class="eyebrow">Agent 02</p>
+        <h1>Content repurposing package</h1>
+        <p class="muted">
+          Current provider:
+          <strong>GCP/Vertex live</strong>.
+        </p>
+        {% if missing_gcp_env %}
+          <p class="notice">
+            Live GCP/Vertex configuration is missing. Please set VERTEX_AI_PROJECT
+            and authenticate with Google ADC before generating.
+          </p>
+        {% endif %}
+
+        <form action="/runs" method="post" class="form" id="agent02-run-form">
+          <div class="field-row">
+            <label>
+              Source type
+              <select name="source_type">
+                <option value="raw_article_text">Raw article text</option>
+                <option value="agent01_blog_package">Agent 01 blog package</option>
+              </select>
+            </label>
+            <label>
+              Audience
+              <input name="audience" type="text" placeholder="B2B content marketing teams">
+            </label>
+          </div>
+
+          <label>
+            Title
+            <input name="title" type="text" placeholder="Turn one blog into a multi-channel campaign">
+          </label>
+
+          <label>
+            Summary
+            <textarea name="summary" rows="3" placeholder="Short source summary"></textarea>
+          </label>
+
+          <label>
+            Full blog/article text
+            <textarea name="full_text" rows="12" placeholder="Paste the approved article or source content here."></textarea>
+          </label>
+
+          <div class="field-row">
+            <label>
+              Brand tone
+              <input name="brand_tone" type="text" placeholder="clear, practical, confident">
+            </label>
+            <label>
+              Campaign goal
+              <input name="campaign_goal" type="text" placeholder="create review-ready social drafts">
+            </label>
+          </div>
+
+          <label>
+            CTA
+            <input name="cta" type="text" placeholder="Read the full guide before planning next week's content.">
+          </label>
+
+          <fieldset>
+            <legend>Target platforms</legend>
+            <label class="check"><input type="checkbox" name="target_platforms" value="linkedin" checked> LinkedIn</label>
+            <label class="check"><input type="checkbox" name="target_platforms" value="instagram" checked> Instagram</label>
+            <label class="check"><input type="checkbox" name="target_platforms" value="x_twitter" checked> X/Twitter</label>
+            <label class="check"><input type="checkbox" name="target_platforms" value="short_video" checked> Short-video script</label>
+            <label class="check"><input type="checkbox" name="include_newsletter" value="1"> Newsletter/email</label>
+          </fieldset>
+
+          <p class="progress-message" id="submit-progress" hidden>
+            Generating with live GCP/Vertex. This may take a few minutes.
+          </p>
+          <button type="submit" id="submit-button">Generate Package</button>
+        </form>
+      </section>
+    </main>
+    <script>
+      const form = document.getElementById("agent02-run-form");
+      const button = document.getElementById("submit-button");
+      const progress = document.getElementById("submit-progress");
+
+      form.addEventListener("submit", () => {
+        progress.hidden = false;
+        button.disabled = true;
+        button.textContent = "Generating...";
+      });
+    </script>
+  </body>
+</html>
