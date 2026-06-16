@@ -1,0 +1,142 @@
+# Agent 04 - SEO Optimization Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-04-seo-optimizer
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    generate_metadata: cheap
+    optimize_headings: cheap
+    review_readability: cheap
+    generate_faqs: cheap
+    optimize_draft: strong
+
+cost:
+  ceiling_inr: 20.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    generate_metadata: 2.0
+    optimize_headings: 2.0
+    review_readability: 2.0
+    generate_faqs: 2.0
+    optimize_draft: 5.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    generate_metadata: 2048
+    optimize_headings: 2048
+    review_readability: 2048
+    generate_faqs: 2048
+    optimize_draft: 8192
+
+telemetry:
+  provider: stdout
+  service: agent-04-seo-optimizer
+  extra_labels:
+    - intake_validate
+    - normalize_input
+    - analyze_existing_draft
+    - plan_keywords
+    - generate_metadata
+    - optimize_headings
+    - review_readability
+    - generate_faqs
+    - optimize_draft
+    - run_risk_checks
+    - score_output
+    - assemble_package
+    - intake_validate.accepted
+    - intake_validate.invalid
+    - normalize_input.complete
+    - analyze_existing_draft.complete
+    - plan_keywords.complete
+    - generate_metadata.complete
+    - optimize_headings.complete
+    - review_readability.complete
+    - generate_faqs.complete
+    - optimize_draft.complete
+    - run_risk_checks.complete
+    - score_output.complete
+    - assemble_package.complete
+    - route.decision
+    - node.error
+    - generate_metadata.provider_hiccup
+    - optimize_headings.provider_hiccup
+    - review_readability.provider_hiccup
+    - generate_faqs.provider_hiccup
+    - optimize_draft.provider_hiccup
+  dimensions:
+    node:
+      - intake_validate
+      - normalize_input
+      - analyze_existing_draft
+      - plan_keywords
+      - generate_metadata
+      - optimize_headings
+      - review_readability
+      - generate_faqs
+      - optimize_draft
+      - run_risk_checks
+      - score_output
+      - assemble_package
+    tier: [cheap, strong, stt]
+    provider: [mock, litellm, gcp, bedrock, azure]
+    status: [pass, needs_more_input, needs_human, stopped_cost_ceiling, error, running]
+    decision: [ok, error, cost_ceiling, needs_more_input]
+    target:
+      - normalize_input
+      - analyze_existing_draft
+      - plan_keywords
+      - generate_metadata
+      - optimize_headings
+      - review_readability
+      - generate_faqs
+      - optimize_draft
+      - run_risk_checks
+      - score_output
+      - assemble_package
+  attr_keys:
+    - service
+    - run_id
+    - node
+    - span_id
+    - decision
+    - target
+    - status
+    - kind
+    - score
+    - word_count
+    - risk_count
+  extra_metric_names:
+    - stage.cost_inr
+    - total.cost_inr
+    - quality.overall_score
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: seo-optimizer/
+
+output_storage:
+  enabled: false
+  prefix: seo-optimizer/v1/
+
+secret_store:
+  provider: env

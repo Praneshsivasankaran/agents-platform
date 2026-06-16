@@ -1,0 +1,42 @@
+[
+  {
+    "id": "good_blog_draft_with_keyword",
+    "description": "Good blog draft already includes the primary keyword.",
+    "expected": ["required_fields_present", "schema_validity", "metadata_quality"]
+  },
+  {
+    "id": "draft_missing_primary_keyword",
+    "description": "Draft omits the primary keyword and should receive placement guidance.",
+    "expected": ["keyword_usage_quality", "risk_detection"]
+  },
+  {
+    "id": "poor_headings",
+    "description": "Draft has weak or missing headings.",
+    "expected": ["heading_quality"]
+  },
+  {
+    "id": "weak_intro_no_cta",
+    "description": "Draft needs intro and CTA improvements.",
+    "expected": ["readability_quality"]
+  },
+  {
+    "id": "prompt_injection_style_draft",
+    "description": "Draft contains instruction-like text that must be treated as data.",
+    "expected": ["risk_detection", "meaning_preservation"]
+  },
+  {
+    "id": "unsupported_claims",
+    "description": "Draft includes unsupported numerical or guarantee claims.",
+    "expected": ["risk_detection"]
+  },
+  {
+    "id": "very_short_draft",
+    "description": "Draft is too thin for confident optimization.",
+    "expected": ["required_fields_present", "risk_detection"]
+  },
+  {
+    "id": "long_messy_draft",
+    "description": "Long draft needs structure and readability fixes.",
+    "expected": ["readability_quality", "heading_quality"]
+  }
+]

@@ -49,3 +49,6 @@ apps/agent-03-ui/runs/*.json
 
 # Local agent UI run artifacts
 apps/*/runs/*.json
+
+agents/*/AGENT_SPEC.pdf
+agents/*/DESIGN.pdf
