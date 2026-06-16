@@ -1,0 +1,13 @@
+pass_threshold: 80
+required_checks_all:
+  - schema_validity
+  - required_fields_present
+metrics:
+  - required_fields_present
+  - metadata_quality
+  - keyword_usage_quality
+  - heading_quality
+  - readability_quality
+  - meaning_preservation
+  - risk_detection
+  - schema_validity

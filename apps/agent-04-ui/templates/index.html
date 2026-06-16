@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 04 SEO Optimizer</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="page">
+      <section class="panel">
+        <p class="eyebrow">Agent 04</p>
+        <h1>SEO Optimizer</h1>
+        <p class="muted">
+          Current provider:
+          {% if provider_mode == "mock" %}
+            <strong>offline test mode</strong>
+          {% else %}
+            <strong>GCP live</strong>
+          {% endif %}
+        </p>
+        {% if missing_gcp_env %}
+          <p class="notice">
+            GCP live mode is missing VERTEX_AI_PROJECT and Google ADC.
+          </p>
+        {% endif %}
+
+        <form action="/optimize" method="post" class="form" id="agent04-run-form">
+          <label>
+            Draft content
+            <textarea name="draft_content" rows="10" placeholder="Paste the blog or article draft here"></textarea>
+          </label>
+
+          <div class="field-row">
+            <label>
+              Topic/title
+              <input name="topic" type="text" placeholder="AI agents for content teams">
+            </label>
+            <label>
+              Primary keyword
+              <input name="primary_keyword" type="text" placeholder="AI content agents">
+            </label>
+          </div>
+
+          <label>
+            Secondary keywords
+            <textarea name="secondary_keywords" rows="2" placeholder="content automation, SEO workflow"></textarea>
+          </label>
+
+          <div class="field-row">
+            <label>
+              Target audience
+              <input name="target_audience" type="text" placeholder="marketing managers">
+            </label>
+            <label>
+              Brand tone
+              <input name="brand_tone" type="text" value="professional and clear">
+            </label>
+          </div>
+
+          <label>
+            Content goal
+            <input name="content_goal" type="text" placeholder="educate and generate demo interest">
+          </label>
+
+          <label>
+            CTA direction
+            <input name="cta_direction" type="text" placeholder="Book a demo">
+          </label>
+
+          <label>
+            Constraints
+            <textarea name="constraints" rows="3" placeholder="Do not mention pricing"></textarea>
+          </label>
+
+          <p class="progress-message" id="submit-progress" hidden>
+            Optimizing SEO...
+          </p>
+          <button type="submit" id="submit-button">Optimize SEO</button>
+        </form>
+      </section>
+    </main>
+    <script>
+      const form = document.getElementById("agent04-run-form");
+      const button = document.getElementById("submit-button");
+      const progress = document.getElementById("submit-progress");
+
+      form.addEventListener("submit", () => {
+        progress.hidden = false;
+        button.disabled = true;
+        button.textContent = "Optimizing...";
+      });
+    </script>
+  </body>
+</html>

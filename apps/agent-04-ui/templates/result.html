@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 04 Run {{ record.run_id }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="page wide">
+      <p><a href="/">New run</a></p>
+
+      <section class="panel">
+        <p class="eyebrow">Run {{ record.run_id }}</p>
+        <h1>SEO optimization package</h1>
+        <div class="status status-{{ package.status }}">{{ package.status }}</div>
+
+        {% if package.notes %}
+          <p class="notice">{{ package.notes }}</p>
+        {% endif %}
+
+        <dl class="grid">
+          <div><dt>Provider</dt><dd>{{ record.provider_mode }}</dd></div>
+          <div><dt>Total cost</dt><dd>Rs {{ "%.4f"|format(package.cost.total_inr if package.cost else 0) }}</dd></div>
+          <div><dt>SEO score</dt><dd>{{ score.total_score if score else 0 }}</dd></div>
+          <div><dt>Pass status</dt><dd>{{ package.pass_status }}</dd></div>
+          <div><dt>LLM output used</dt><dd>{{ package.generation_used_llm }}</dd></div>
+        </dl>
+
+        {% if package.title_options %}
+          <h2>Title Options</h2>
+          <ul>{% for item in package.title_options %}<li>{{ item }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if package.meta_description %}
+          <h2>Meta Description</h2>
+          <p class="summary">{{ package.meta_description }}</p>
+        {% endif %}
+
+        {% if package.url_slug or package.recommended_h1 %}
+          <h2>URL And H1</h2>
+          <dl class="grid compact">
+            <div><dt>URL slug</dt><dd>{{ package.url_slug }}</dd></div>
+            <div><dt>Recommended H1</dt><dd>{{ package.recommended_h1 }}</dd></div>
+          </dl>
+        {% endif %}
+
+        {% if package.heading_plan %}
+          <h2>Heading Plan</h2>
+          <div class="card-grid">
+            {% for item in package.heading_plan %}
+              <article class="item-card">
+                <h3>{{ item.level|upper }}: {{ item.text }}</h3>
+                {% if item.reason %}<p>{{ item.reason }}</p>{% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if package.keyword_placement %}
+          <h2>Keyword Placement</h2>
+          <table>
+            <thead><tr><th>Keyword</th><th>Present</th><th>Density</th><th>Suggested locations</th></tr></thead>
+            <tbody>
+              {% for item in package.keyword_placement %}
+                <tr>
+                  <td>{{ item.keyword }}</td>
+                  <td>{{ item.present }}</td>
+                  <td>{{ "%.3f"|format(item.density) }}%</td>
+                  <td>{{ item.suggested_locations|join(", ") }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if package.readability_fixes %}
+          <h2>Readability Fixes</h2>
+          <ul>{% for item in package.readability_fixes %}<li>{{ item }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if package.intro_improvement or package.conclusion_improvement or package.cta_suggestion %}
+          <h2>Intro, Conclusion, CTA</h2>
+          <dl class="stacked">
+            <div><dt>Intro improvement</dt><dd>{{ package.intro_improvement }}</dd></div>
+            <div><dt>Conclusion improvement</dt><dd>{{ package.conclusion_improvement }}</dd></div>
+            <div><dt>CTA suggestion</dt><dd>{{ package.cta_suggestion }}</dd></div>
+          </dl>
+        {% endif %}
+
+        {% if package.faq_suggestions %}
+          <h2>FAQ Suggestions</h2>
+          {% for item in package.faq_suggestions %}
+            <article class="item-card">
+              <h3>{{ item.question }}</h3>
+              <p>{{ item.answer }}</p>
+            </article>
+          {% endfor %}
+        {% endif %}
+
+        {% if package.risk_flags %}
+          <h2>Risk Flags</h2>
+          <div class="card-grid">
+            {% for flag in package.risk_flags %}
+              <article class="item-card">
+                <h3>{{ flag.code }}</h3>
+                <p><strong>{{ flag.severity }}</strong>: {{ flag.message }}</p>
+              </article>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if package.editor_notes %}
+          <h2>Editor Notes</h2>
+          <ul>{% for item in package.editor_notes %}<li>{{ item }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if score and score.total_score is defined %}
+          <h2>Score Breakdown</h2>
+          <dl class="grid compact">
+            <div><dt>Metadata</dt><dd>{{ score.metadata_quality }}</dd></div>
+            <div><dt>Keyword</dt><dd>{{ score.keyword_usage }}</dd></div>
+            <div><dt>Headings</dt><dd>{{ score.heading_structure }}</dd></div>
+            <div><dt>Readability</dt><dd>{{ score.readability }}</dd></div>
+            <div><dt>Goal</dt><dd>{{ score.content_goal_alignment }}</dd></div>
+            <div><dt>FAQ</dt><dd>{{ score.faq_usefulness }}</dd></div>
+            <div><dt>Risk</dt><dd>{{ score.risk_safety }}</dd></div>
+          </dl>
+        {% endif %}
+
+        {% if package.optimized_draft %}
+          <h2>Optimized Draft</h2>
+          <pre class="draft">{{ package.optimized_draft }}</pre>
+        {% endif %}
+
+        {% if package.cost and package.cost.stage_costs %}
+          <h2>Cost Summary</h2>
+          <table>
+            <thead><tr><th>Stage</th><th>Tier</th><th>Prompt</th><th>Completion</th><th>INR</th></tr></thead>
+            <tbody>
+              {% for stage in package.cost.stage_costs %}
+                <tr>
+                  <td>{{ stage.stage }}</td>
+                  <td>{{ stage.tier }}</td>
+                  <td>{{ stage.tokens_prompt }}</td>
+                  <td>{{ stage.tokens_completion }}</td>
+                  <td>Rs {{ "%.4f"|format(stage.cost_inr) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>
