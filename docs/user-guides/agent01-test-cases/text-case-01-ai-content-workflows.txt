@@ -1,0 +1,29 @@
+Topic: How AI agents help B2B marketing teams scale content without losing quality
+
+Audience: B2B marketing managers, content leads, and founders at growing SaaS companies
+
+Tone: clear, practical, confident
+
+Goal: Explain how AI agents can support content operations while keeping humans in control of editorial judgment.
+
+Source material:
+B2B content teams often have more ideas than production capacity. Campaign notes arrive from sales calls, customer success conversations, leadership planning sessions, webinars, analyst reports, and product updates. The challenge is not only writing. The harder operational problem is turning scattered information into a clear brief, then moving that brief through drafting, review, revision, and repurposing without losing the original message.
+
+AI agents can help by taking over repeatable preparation work. A useful agent can summarize messy notes, identify the core message, suggest a working outline, draft a first version, prepare a review package, and flag weak claims before the draft reaches an editor. This does not remove the need for human review. In fact, the best agent workflow makes human review more important because editors can spend less time organizing raw material and more time checking accuracy, voice, positioning, and evidence.
+
+The safest place to start is a low-risk internal workflow. For example, a marketing team can begin with blog draft preparation from already-approved campaign notes. The agent should not publish the article, write to the CMS, invent statistics, or scrape the web. It should only produce a review-ready draft that a human can edit and approve. This keeps the process useful while reducing risk.
+
+A strong workflow has clear boundaries. The input should include the target audience, campaign goal, tone, key message, supporting points, and any constraints. If proof is missing, the agent should preserve the gap as an evidence placeholder rather than pretending the fact is verified. If the source is too thin, the agent should stop and ask for more information instead of producing a generic article.
+
+The business value comes from consistency. When every campaign brief follows the same path, the team gets repeatable outputs: title options, outline, draft, summary, SEO keywords, meta description, and quality notes. Over time, this reduces handoff friction between strategy, writing, review, and repurposing. Teams can also compare cost and quality across runs because the agent records stage-level usage and cost.
+
+The main risk is treating AI output as finished content. A review-ready package is not the same as a publish-ready article. Humans still need to verify claims, adjust examples, align with brand voice, and make final editorial decisions. The best framing is simple: AI agents speed up the path from raw context to reviewable draft, while humans remain responsible for truth, taste, and approval.
+
+Suggested structure:
+1. Open with the real content operations problem: scattered context and slow handoffs.
+2. Explain where AI agents help in the workflow.
+3. Make clear that human review is still required.
+4. Show a safe starting workflow for B2B teams.
+5. End with a practical checklist for adopting agents responsibly.
+
+CTA: Pick one repeatable content workflow this week, document the inputs and review rules, and test an agent-assisted draft before scaling further.

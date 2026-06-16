@@ -1,0 +1,30 @@
+Topic: How remote teams can improve employee onboarding
+
+Audience: startup founders, people operations leads, and managers of remote teams
+
+Tone: practical, warm, and structured
+
+Goal: Show how remote onboarding can become clearer, more human, and more repeatable without overwhelming new hires.
+
+Source material:
+Remote onboarding often fails for reasons that are easy to miss. A new employee may receive access to tools, a few calendar invites, and a folder of documents, but still feel unsure about how work really happens. They may not know who to ask for help, which channels matter, what "good" looks like in their role, or how decisions are made. In an office, some of this context is picked up informally. In a remote team, it has to be designed more deliberately.
+
+Good onboarding starts before the first day. The manager should prepare a simple first-week plan, confirm tool access, assign an onboarding buddy, and send a welcome note that explains what to expect. The goal is not to overload the new hire with every policy and system. It is to reduce uncertainty. A clear first day should answer basic questions: where to log in, who to meet, what to read, what to do first, and how to ask for help.
+
+The first week should mix context, relationships, and small wins. New hires need company background, product or customer context, team rituals, and role expectations. They also need human connection. A buddy can explain unwritten norms, help interpret Slack channels, and make the person feel less alone. Managers should schedule short check-ins, not just long information sessions. Frequent small conversations work better than a single overloaded onboarding call.
+
+Documentation matters, but it should be usable. Many companies create onboarding docs that are too long, outdated, or scattered across tools. A better approach is to build a role-specific onboarding path with links, tasks, owners, and timing. For example: "Day 1: setup and welcome. Week 1: customer and product context. Week 2: shadowing and first contribution. Week 3: independent work with feedback." This gives the new hire a map.
+
+Remote onboarding should also define success. A new hire should know what they are expected to learn, deliver, and understand in the first 30, 60, and 90 days. These expectations should be realistic and role-specific. If success criteria are vague, people may either wait for direction or try to prove themselves by doing too much too soon.
+
+The best remote onboarding systems are repeatable but personal. The process should be standardized enough that nothing important is forgotten, but flexible enough to fit the person and the role. Teams should collect feedback from each new hire and improve the process every month.
+
+Suggested structure:
+1. Open with why remote onboarding needs deliberate design.
+2. Explain what should happen before day one.
+3. Describe the first week: context, relationships, and small wins.
+4. Show how documentation should be organized.
+5. Explain 30/60/90-day success expectations.
+6. End with a manager checklist.
+
+CTA: Create a one-page first-week onboarding plan for your next remote hire before their start date.
