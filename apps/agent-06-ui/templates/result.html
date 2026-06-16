@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Whitepaper Development Package</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Whitepaper development package</h1>
+          <p class="subtle">Run {{ record.run_id }} · Provider: <strong>{{ record.provider_mode }}</strong></p>
+        </div>
+        <a class="button-secondary" href="/">New Run</a>
+      </header>
+
+      <section class="summary-grid">
+        <div class="metric">
+          <span>Status</span>
+          <strong>{{ package.status }}</strong>
+        </div>
+        <div class="metric">
+          <span>Pass</span>
+          <strong>{{ package.pass_status }}</strong>
+        </div>
+        <div class="metric">
+          <span>Quality</span>
+          <strong>{{ score.total_score if score else "n/a" }}</strong>
+        </div>
+        <div class="metric">
+          <span>Cost</span>
+          <strong>Rs {{ "%.4f"|format(package.cost.total_inr) }}</strong>
+        </div>
+      </section>
+
+      {% if package.notes %}
+        <section class="notice">{{ package.notes }}</section>
+      {% endif %}
+
+      <section class="panel">
+        <h2>Title Options</h2>
+        <ul>
+          {% for title in package.title_options %}
+            <li>{{ title }}</li>
+          {% else %}
+            <li>No title options returned.</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>Recommended Angle</h2>
+        <p>{{ package.recommended_angle }}</p>
+      </section>
+
+      <section class="section-grid">
+        {% for label, value in [
+          ("Executive Summary", package.executive_summary),
+          ("Target Audience and Pain Points", package.target_audience_and_pain_points),
+          ("Problem Statement", package.problem_statement),
+          ("Industry and Context", package.industry_context),
+          ("Proposed Solution", package.proposed_solution),
+          ("Benefits", package.benefits),
+          ("Use Cases", package.use_cases),
+          ("Implementation Approach", package.implementation_approach),
+          ("Risks and Challenges", package.risks_and_challenges),
+          ("Conclusion", package.conclusion),
+          ("CTA", package.cta)
+        ] %}
+          <article class="panel">
+            <h2>{{ label }}</h2>
+            <p>{{ value }}</p>
+          </article>
+        {% endfor %}
+      </section>
+
+      <section class="panel">
+        <h2>Key Claims and Evidence Status</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Claim</th>
+                <th>Status</th>
+                <th>Reference</th>
+                <th>Review Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for claim in claims %}
+                <tr>
+                  <td>{{ claim.claim }}</td>
+                  <td>{{ claim.evidence_status }}</td>
+                  <td>{{ claim.evidence_reference }}</td>
+                  <td>{{ claim.review_note }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="4">No claims returned.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="summary-grid">
+        <div class="panel">
+          <h2>Missing Evidence</h2>
+          <ul>
+            {% for item in package.missing_evidence %}
+              <li>{{ item }}</li>
+            {% else %}
+              <li>No missing evidence listed.</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="panel">
+          <h2>Risk Flags</h2>
+          <ul>
+            {% for flag in risks %}
+              <li><strong>{{ flag.code }}</strong>: {{ flag.message }}</li>
+            {% else %}
+              <li>No risk flags.</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="panel">
+          <h2>Generic Content Flags</h2>
+          <ul>
+            {% for flag in generic_flags %}
+              <li><strong>{{ flag.location }}</strong>: {{ flag.message }}</li>
+            {% else %}
+              <li>No generic content flags.</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="panel">
+          <h2>Improvement Suggestions</h2>
+          <ul>
+            {% for item in package.improvement_suggestions %}
+              <li>{{ item }}</li>
+            {% else %}
+              <li>No improvement suggestions returned.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

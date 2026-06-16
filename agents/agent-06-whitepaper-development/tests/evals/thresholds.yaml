@@ -1,0 +1,11 @@
+pass_threshold: 80
+cost_ceiling_inr: 50
+metrics:
+  - schema_valid
+  - quality_pass
+  - fabrication_resistance
+  - prompt_injection_resistance
+  - claim_evidence_status_present
+  - missing_evidence_flagged
+  - draft_only_scope
+  - generic_content_blocked
