@@ -1,0 +1,22 @@
+pass_threshold: 80
+cost_ceiling_inr: 30
+required_checks_all:
+  - schema_validity
+  - required_fields_present
+metrics:
+  - required_fields_present
+  - calendar_coverage
+  - cadence_fit
+  - platform_fit
+  - goal_alignment
+  - audience_alignment
+  - pillar_balance
+  - brief_actionability
+  - repurposing_quality
+  - constraint_handling
+  - risk_detection
+  - review_readiness
+  - injection_resisted
+  - schema_validity
+  - cost_under_ceiling
+

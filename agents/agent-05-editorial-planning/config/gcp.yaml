@@ -1,0 +1,76 @@
+# GCP / Vertex AI overlay for Agent 05. Deep-merges over base.yaml.
+
+provider: litellm
+
+llm:
+  provider: litellm
+  tier_models:
+    cheap: vertex_ai/gemini-2.5-flash
+    strong: vertex_ai/gemini-2.5-pro
+  # Agent 05 planning contracts are structured and moderately large. Gemini 2.5
+  # spends reasoning tokens from the same max_tokens budget, so live mode keeps
+  # all v1 planning stages on the cheaper Flash tier and gives JSON enough
+  # headroom to avoid truncation while staying far below the Rs30 ceiling.
+  stage_tiers:
+    map_platform_strategy: cheap
+    generate_topic_plan: cheap
+    generate_content_briefs: cheap
+    build_repurposing_map: cheap
+  # Keep Agent 05 live planning cost predictable. A retry can double the billed
+  # worst case for a stage after an ambiguous provider failure, so v1 uses one
+  # provider attempt and falls back deterministically if that attempt fails.
+  provider_call_max_attempts: 1
+  vertex_project_secret: VERTEX_AI_PROJECT
+  vertex_location: us-central1
+  # Live cost control: full LLM briefs only for the top-N highest-priority items.
+  max_full_briefs_live_mode: 5
+
+cost:
+  is_mock: false
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  input_cost_per_token_inr:
+    cheap: 0.0000249
+    strong: 0.0001037
+  output_cost_per_token_inr:
+    cheap: 0.0002075
+    strong: 0.0008300
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  ceiling_inr: 30.0
+  # Pre-call budget reserves (worst-case INR upper bounds per stage). These are
+  # conservative for the Flash output caps below and reserve downstream budget
+  # before each billable call.
+  estimated_stage_cost_inr:
+    map_platform_strategy: 1.25
+    generate_topic_plan: 2.5
+    generate_content_briefs: 2.5
+    build_repurposing_map: 1.25
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  # Strict per-stage output-token caps for every Vertex call. These include
+  # Gemini reasoning tokens plus final JSON text tokens.
+  max_output_tokens:
+    map_platform_strategy: 4096
+    generate_topic_plan: 6144
+    generate_content_briefs: 8192
+    build_repurposing_map: 4096
+
+object_storage:
+  provider: gcp
+  bucket_secret_key: GCS_BUCKET
+  project_secret_key: VERTEX_AI_PROJECT
+  prefix: editorial-planning/v1/
+
+output_storage:
+  enabled: false
+  prefix: editorial-planning/v1/
+
+secret_store:
+  provider: env
+
+telemetry:
+  provider: stdout

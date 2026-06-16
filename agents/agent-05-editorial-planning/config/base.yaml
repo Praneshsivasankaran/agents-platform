@@ -1,0 +1,147 @@
+# Agent 05 - Editorial Planning Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-05-editorial-planning
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    map_platform_strategy: cheap
+    generate_topic_plan: strong
+    generate_content_briefs: strong
+    build_repurposing_map: cheap
+  # Live cost control: for large calendars, generate full LLM briefs only for the
+  # highest-priority items; the rest get lighter deterministic summaries.
+  max_full_briefs_live_mode: 5
+
+cost:
+  ceiling_inr: 30.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  # Conservative per-stage worst-case INR upper bounds, used for the pre-call budget
+  # reserve. Each stage's real worst-case (prompt_tokens*input + max_output*output + fixed)
+  # must stay at or below its estimate so the chain can never exceed ceiling_inr.
+  estimated_stage_cost_inr:
+    map_platform_strategy: 1.5
+    generate_topic_plan: 7.0
+    generate_content_briefs: 4.0
+    build_repurposing_map: 1.5
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  # Strict per-stage output-token caps. These bound every provider call's worst-case
+  # cost and keep a typical live run well under the Rs30 ceiling.
+  max_output_tokens:
+    map_platform_strategy: 1280
+    generate_topic_plan: 6144
+    generate_content_briefs: 3072
+    build_repurposing_map: 1280
+
+telemetry:
+  provider: stdout
+  service: agent-05-editorial-planning
+  extra_labels:
+    - intake_validate
+    - normalize_request
+    - validate_date_and_frequency
+    - build_calendar_skeleton
+    - map_platform_strategy
+    - generate_topic_plan
+    - generate_content_briefs
+    - build_repurposing_map
+    - analyze_balance_and_gaps
+    - run_risk_checks
+    - score_output
+    - assemble_package
+    - intake_validate.accepted
+    - intake_validate.invalid
+    - normalize_request.complete
+    - validate_date_and_frequency.complete
+    - build_calendar_skeleton.complete
+    - map_platform_strategy.complete
+    - generate_topic_plan.complete
+    - generate_content_briefs.complete
+    - build_repurposing_map.complete
+    - analyze_balance_and_gaps.complete
+    - run_risk_checks.complete
+    - score_output.complete
+    - assemble_package.complete
+    - route.decision
+    - node.error
+    - map_platform_strategy.provider_hiccup
+    - generate_topic_plan.provider_hiccup
+    - generate_content_briefs.provider_hiccup
+    - build_repurposing_map.provider_hiccup
+  dimensions:
+    node:
+      - intake_validate
+      - normalize_request
+      - validate_date_and_frequency
+      - build_calendar_skeleton
+      - map_platform_strategy
+      - generate_topic_plan
+      - generate_content_briefs
+      - build_repurposing_map
+      - analyze_balance_and_gaps
+      - run_risk_checks
+      - score_output
+      - assemble_package
+    tier: [cheap, strong, stt]
+    provider: [mock, litellm, gcp, bedrock, azure]
+    status: [pass, needs_more_input, needs_human, needs_review_budget_limited, stopped_cost_ceiling, error, running]
+    decision: [ok, error, cost_ceiling, needs_more_input]
+    target:
+      - normalize_request
+      - validate_date_and_frequency
+      - build_calendar_skeleton
+      - map_platform_strategy
+      - generate_topic_plan
+      - generate_content_briefs
+      - build_repurposing_map
+      - analyze_balance_and_gaps
+      - run_risk_checks
+      - score_output
+      - assemble_package
+  attr_keys:
+    - service
+    - run_id
+    - node
+    - span_id
+    - decision
+    - target
+    - status
+    - kind
+    - score
+    - planned_items
+    - risk_count
+  extra_metric_names:
+    - stage.cost_inr
+    - total.cost_inr
+    - quality.overall_score
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: editorial-planning/
+
+output_storage:
+  enabled: false
+  prefix: editorial-planning/v1/
+
+secret_store:
+  provider: env
+

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 05 Run {{ record.run_id }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="page wide">
+      <p><a href="/">New run</a></p>
+
+      <section class="panel">
+        <p class="eyebrow">Run {{ record.run_id }}</p>
+        <h1>Editorial planning package</h1>
+        <div class="status status-{{ package.status }}">{{ package.status }}</div>
+
+        {% if package.notes %}
+          <p class="notice">{{ package.notes }}</p>
+        {% endif %}
+
+        <dl class="grid">
+          <div><dt>Provider</dt><dd>{{ record.provider_mode }}</dd></div>
+          <div><dt>Total cost</dt><dd>Rs {{ "%.4f"|format(package.cost.total_inr if package.cost else 0) }}</dd></div>
+          <div><dt>Quality score</dt><dd>{{ score.total_score if score else 0 }}</dd></div>
+          <div><dt>Pass status</dt><dd>{{ package.pass_status }}</dd></div>
+          <div><dt>LLM output used</dt><dd>{{ package.generation_used_llm }}</dd></div>
+        </dl>
+
+        {% if package.request_summary %}
+          <h2>Request Summary</h2>
+          <p class="summary">{{ package.request_summary }}</p>
+        {% endif %}
+
+        {% if package.editorial_calendar %}
+          <h2>Editorial Calendar</h2>
+          <table>
+            <thead><tr><th>Date</th><th>Due</th><th>Platform</th><th>Pillar</th><th>Topic</th><th>Priority</th></tr></thead>
+            <tbody>
+              {% for item in package.editorial_calendar %}
+                <tr>
+                  <td>{{ item.planned_date }}</td>
+                  <td>{{ item.internal_due_date }}</td>
+                  <td>{{ item.platform }}</td>
+                  <td>{{ item.pillar }}</td>
+                  <td>{{ item.suggested_title }}</td>
+                  <td>{{ item.priority }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if package.weekly_plan %}
+          <h2>Weekly Plan</h2>
+          <div class="card-grid">
+            {% for item in package.weekly_plan %}
+              <article class="item-card">
+                <h3>{{ item.period_label }}</h3>
+                <p>{{ item.focus }}</p>
+                <p>{{ item.planned_items }} planned item(s) across {{ item.platforms|join(", ") }}</p>
+              </article>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if package.monthly_plan %}
+          <h2>Monthly Plan</h2>
+          <div class="card-grid">
+            {% for item in package.monthly_plan %}
+              <article class="item-card">
+                <h3>{{ item.period_label }}</h3>
+                <p>{{ item.focus }}</p>
+                <p>{{ item.planned_items }} planned item(s)</p>
+              </article>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if package.platform_plan %}
+          <h2>Platform-Wise Plan</h2>
+          <div class="card-grid">
+            {% for item in package.platform_plan %}
+              <article class="item-card">
+                <h3>{{ item.platform }}</h3>
+                <p><strong>{{ item.planned_count }}</strong> planned item(s)</p>
+                <p>{{ item.primary_objective }}</p>
+                {% if item.content_types %}<p>{{ item.content_types|join(", ") }}</p>{% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if package.content_briefs %}
+          <h2>Content Briefs</h2>
+          {% for brief in package.content_briefs %}
+            <article class="item-card">
+              <h3>{{ brief.title }}</h3>
+              <dl class="grid compact">
+                <div><dt>Platform</dt><dd>{{ brief.platform }}</dd></div>
+                <div><dt>Type</dt><dd>{{ brief.content_type }}</dd></div>
+                <div><dt>Brief ID</dt><dd>{{ brief.brief_id }}</dd></div>
+              </dl>
+              <p>{{ brief.key_message }}</p>
+              <ul>{% for item in brief.outline %}<li>{{ item }}</li>{% endfor %}</ul>
+            </article>
+          {% endfor %}
+        {% endif %}
+
+        {% if package.cta_recommendations %}
+          <h2>CTA Suggestions</h2>
+          <ul>{% for item in package.cta_recommendations %}<li>{{ item.cta }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if package.repurposing_map %}
+          <h2>Repurposing Map</h2>
+          <table>
+            <thead><tr><th>Source</th><th>Target</th><th>Format</th><th>Adaptation</th></tr></thead>
+            <tbody>
+              {% for item in package.repurposing_map %}
+                <tr>
+                  <td>{{ item.source_platform }}</td>
+                  <td>{{ item.target_platform }}</td>
+                  <td>{{ item.repurposed_format }}</td>
+                  <td>{{ item.adaptation_note }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if analysis %}
+          <h2>Balance And Gap Analysis</h2>
+          {% if analysis.gap_summary %}<ul>{% for item in analysis.gap_summary %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+          {% if analysis.recommendations %}<ul>{% for item in analysis.recommendations %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+        {% endif %}
+
+        {% if package.risk_flags %}
+          <h2>Risk Flags</h2>
+          <div class="card-grid">
+            {% for flag in package.risk_flags %}
+              <article class="item-card">
+                <h3>{{ flag.code }}</h3>
+                <p><strong>{{ flag.severity }}</strong>: {{ flag.message }}</p>
+                {% if flag.recommended_fix %}<p>{{ flag.recommended_fix }}</p>{% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if package.review_notes %}
+          <h2>Review Notes</h2>
+          <ul>{% for item in package.review_notes %}<li>{{ item }}</li>{% endfor %}</ul>
+        {% endif %}
+
+        {% if score and score.total_score is defined %}
+          <h2>Score Breakdown</h2>
+          <dl class="grid compact">
+            <div><dt>Input</dt><dd>{{ score.input_completeness }}</dd></div>
+            <div><dt>Calendar</dt><dd>{{ score.calendar_coverage }}</dd></div>
+            <div><dt>Goal</dt><dd>{{ score.audience_goal_alignment }}</dd></div>
+            <div><dt>Platform</dt><dd>{{ score.platform_fit }}</dd></div>
+            <div><dt>Pillar</dt><dd>{{ score.pillar_balance }}</dd></div>
+            <div><dt>Briefs</dt><dd>{{ score.brief_actionability }}</dd></div>
+            <div><dt>Repurpose</dt><dd>{{ score.repurposing_usefulness }}</dd></div>
+            <div><dt>Risk</dt><dd>{{ score.risk_safety }}</dd></div>
+          </dl>
+        {% endif %}
+
+        {% if package.cost and package.cost.stage_costs %}
+          <h2>Cost Summary</h2>
+          <table>
+            <thead><tr><th>Stage</th><th>Tier</th><th>Prompt</th><th>Completion</th><th>INR</th></tr></thead>
+            <tbody>
+              {% for stage in package.cost.stage_costs %}
+                <tr>
+                  <td>{{ stage.stage }}</td>
+                  <td>{{ stage.tier }}</td>
+                  <td>{{ stage.tokens_prompt }}</td>
+                  <td>{{ stage.tokens_completion }}</td>
+                  <td>Rs {{ "%.4f"|format(stage.cost_inr) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>
+
