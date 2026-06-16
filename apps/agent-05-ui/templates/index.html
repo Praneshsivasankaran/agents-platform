@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 05 Editorial Planner</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="page">
+      <section class="panel">
+        <p class="eyebrow">Agent 05</p>
+        <h1>Editorial Planner</h1>
+        <p class="muted">
+          Current provider:
+          {% if provider_mode == "mock" %}
+            <strong>offline test mode</strong>
+          {% else %}
+            <strong>GCP live</strong>
+          {% endif %}
+        </p>
+        {% if missing_gcp_env %}
+          <p class="notice">
+            GCP live mode is missing VERTEX_AI_PROJECT and Google ADC.
+          </p>
+        {% endif %}
+
+        <form action="/plan" method="post" class="form" id="agent05-run-form">
+          <div class="field-row">
+            <label>
+              Brand/company
+              <input name="brand_name" type="text" placeholder="Northstar Wellness">
+            </label>
+            <label>
+              Campaign theme
+              <input name="campaign_theme" type="text" placeholder="Burnout prevention for distributed teams">
+            </label>
+          </div>
+
+          <label>
+            Business goal
+            <textarea name="business_goal" rows="3" placeholder="Drive qualified leads for a corporate wellness program"></textarea>
+          </label>
+
+          <label>
+            Target audience
+            <textarea name="target_audience" rows="3" placeholder="HR leaders at mid-market companies"></textarea>
+          </label>
+
+          <div class="field-row">
+            <label>
+              Platforms
+              <input name="platforms" type="text" placeholder="blog, linkedin, email">
+            </label>
+            <label>
+              Content pillars
+              <input name="content_pillars" type="text" placeholder="education, proof, conversion">
+            </label>
+          </div>
+
+          <div class="field-row">
+            <label>
+              Start date
+              <input name="start_date" type="date">
+            </label>
+            <label>
+              End date
+              <input name="end_date" type="date">
+            </label>
+          </div>
+
+          <div class="field-row">
+            <label>
+              Cadence
+              <select name="cadence">
+                <option value="weekly" selected>weekly</option>
+                <option value="daily">daily</option>
+                <option value="monthly">monthly</option>
+                <option value="custom">custom</option>
+              </select>
+            </label>
+            <label>
+              Posts per week
+              <input name="count_per_week" type="number" min="0" max="21" value="3">
+            </label>
+            <label>
+              Posts per month
+              <input name="count_per_month" type="number" min="0" max="120" value="8">
+            </label>
+          </div>
+
+          <div class="field-row">
+            <label>
+              Total posts
+              <input name="total_posts" type="number" min="0" max="365" placeholder="optional">
+            </label>
+            <label>
+              Approval lead days
+              <input name="approval_lead_time_days" type="number" min="0" max="60" value="5">
+            </label>
+          </div>
+
+          <label>
+            Tone/brand voice
+            <input name="brand_voice" type="text" value="warm, expert, practical">
+          </label>
+
+          <label>
+            Existing ideas
+            <textarea name="existing_ideas" rows="3" placeholder="Checklist for spotting team burnout"></textarea>
+          </label>
+
+          <label>
+            Constraints
+            <textarea name="constraints" rows="3" placeholder="Avoid medical diagnosis claims"></textarea>
+          </label>
+
+          <div class="field-row">
+            <label>
+              Priority platforms
+              <input name="priority_platforms" type="text" placeholder="linkedin, email">
+            </label>
+            <label>
+              Production capacity/week
+              <input name="production_capacity_per_week" type="number" min="0" max="100" placeholder="optional">
+            </label>
+          </div>
+
+          <label>
+            Excluded topics
+            <textarea name="excluded_topics" rows="2" placeholder="medical diagnosis, pricing claims"></textarea>
+          </label>
+
+          <p class="progress-message" id="submit-progress" hidden>
+            Generating editorial plan...
+          </p>
+          <button type="submit" id="submit-button">Generate Plan</button>
+        </form>
+      </section>
+    </main>
+    <script>
+      const form = document.getElementById("agent05-run-form");
+      const button = document.getElementById("submit-button");
+      const progress = document.getElementById("submit-progress");
+
+      form.addEventListener("submit", () => {
+        progress.hidden = false;
+        button.disabled = true;
+        button.textContent = "Generating...";
+      });
+    </script>
+  </body>
+</html>
+
