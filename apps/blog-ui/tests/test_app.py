@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -86,28 +87,77 @@ def test_text_run_succeeds_on_mock_provider(client, ui):
 
 
 def test_agent03_blog_brief_json_is_included(client, ui):
+    brief = {
+        "selected_idea_id": "idea_01",
+        "selected_idea_title": "How AI Agents Help B2B Teams Scale Content",
+        "suggested_title": "How AI Agents Help B2B Teams Scale Content",
+        "title_options": [
+            "How AI Agents Help B2B Teams Scale Content",
+            "A Practical Guide to Human-Reviewed AI Content Workflows",
+        ],
+        "target_audience": "B2B marketing managers",
+        "campaign_goal": "Build awareness for safe AI-assisted content workflows",
+        "content_angle": (
+            "Show how agents reduce repetitive content operations while "
+            "humans keep editorial control."
+        ),
+        "core_message": (
+            "AI agents help content teams scale planning, drafting, and review "
+            "without removing human judgment."
+        ),
+        "pain_points": [
+            "Campaign notes are scattered across calls, docs, and chats.",
+            "Editors spend too much time preparing first drafts.",
+            "Teams need speed without losing accuracy or brand voice.",
+        ],
+        "value_proposition": (
+            "A repeatable agent-assisted workflow gives teams a cleaner first "
+            "draft and a stronger review process."
+        ),
+        "suggested_outline": [
+            "Why content teams get stuck",
+            "Where AI agents help",
+            "Why human review still matters",
+            "How to start safely",
+        ],
+        "proof_points_or_placeholders": ["Add internal time-saved evidence if available."],
+        "cta": "Audit one repeatable content workflow this week.",
+        "tone": "clear, practical, confident",
+        "keywords": ["AI agents", "content marketing", "content workflow"],
+        "constraints": [
+            "Do not invent statistics.",
+            "Keep evidence placeholders visible when proof is missing.",
+        ],
+        "risk_flags": ["evidence_placeholder_needed"],
+        "quality_notes": ["Use specific workflow examples instead of hype."],
+    }
     response = client.post(
         "/runs",
         data={
             "input_type": "text",
             "raw_text": "",
-            "blog_brief_from_agent_03": (
-                '{"selected_idea_title":"Why teams need campaign-level content planning",'
-                '"target_audience":"B2B marketing managers",'
-                '"campaign_goal":"Awareness",'
-                '"suggested_outline":["Open with the planning gap","Show the review workflow"],'
-                '"constraints":["Do not invent benchmark statistics."]}'
-            ),
+            "blog_brief_from_agent_03": json.dumps(brief),
         },
         follow_redirects=False,
     )
     assert response.status_code == 303
     run_id = response.headers["location"].rsplit("/", 1)[-1]
     record = ui._load_run(run_id)
-    brief = record["input"]["blog_brief_from_agent_03"]
-    assert brief["selected_idea_title"] == "Why teams need campaign-level content planning"
-    assert brief["target_audience"] == "B2B marketing managers"
-    assert brief["constraints"] == ["Do not invent benchmark statistics."]
+    stored_brief = record["input"]["blog_brief_from_agent_03"]
+    assert stored_brief["selected_idea_title"] == "How AI Agents Help B2B Teams Scale Content"
+    assert stored_brief["suggested_title"] == "How AI Agents Help B2B Teams Scale Content"
+    assert stored_brief["title_options"][0] == "How AI Agents Help B2B Teams Scale Content"
+    assert stored_brief["target_audience"] == "B2B marketing managers"
+    assert stored_brief["suggested_outline"] == [
+        "Why content teams get stuck",
+        "Where AI agents help",
+        "Why human review still matters",
+        "How to start safely",
+    ]
+    assert stored_brief["constraints"] == [
+        "Do not invent statistics.",
+        "Keep evidence placeholders visible when proof is missing.",
+    ]
     assert record["package"]["status"] in {"pass", "needs_human", "stopped_cost_ceiling", "error"}
 
 
