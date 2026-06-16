@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Case Study Package</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Case study package</h1>
+          <p class="subtle">Run {{ record.run_id }} - Provider: <strong>{{ record.provider_mode }}</strong></p>
+        </div>
+        <a class="button-secondary" href="/">New Run</a>
+      </header>
+
+      <section class="summary-grid">
+        <div class="metric">
+          <span>Status</span>
+          <strong>{{ package.status }}</strong>
+        </div>
+        <div class="metric">
+          <span>Pass</span>
+          <strong>{{ package.pass_status }}</strong>
+        </div>
+        <div class="metric">
+          <span>Quality</span>
+          <strong>{{ quality.overall_score if quality else "n/a" }}</strong>
+        </div>
+        <div class="metric">
+          <span>Cost</span>
+          <strong>Rs {{ "%.4f"|format(package.cost_usage.total_inr) }}</strong>
+        </div>
+      </section>
+
+      {% if package.notes %}
+        <section class="notice">{{ package.notes }}</section>
+      {% endif %}
+
+      <section class="panel">
+        <h2>Title Options</h2>
+        <ul>
+          {% for title in package.title_options %}
+            <li>{{ title }}</li>
+          {% else %}
+            <li>No title options returned.</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="section-grid">
+        {% for label, value in [
+          ("Executive Summary", package.executive_summary),
+          ("Customer Background", package.customer_background),
+          ("Challenge", package.challenge_section),
+          ("Solution", package.solution_section),
+          ("Implementation", package.implementation_section),
+          ("Results", package.results_section)
+        ] %}
+          <article class="panel">
+            <h2>{{ label }}</h2>
+            <p>{{ value }}</p>
+          </article>
+        {% endfor %}
+      </section>
+
+      <section class="panel">
+        <h2>Metric Highlights</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Value</th>
+                <th>Confidence</th>
+                <th>Evidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for metric in metrics %}
+                <tr>
+                  <td>{{ metric.label }}</td>
+                  <td>{{ metric.value }}</td>
+                  <td>{{ metric.confidence }}</td>
+                  <td>{{ metric.evidence }}</td>
+                </tr>
+              {% else %}
+                <tr><td colspan="4">No metric highlights returned.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="summary-grid">
+        <div class="panel">
+          <h2>Warnings</h2>
+          <ul>
+            {% for warning in warnings %}
+              <li><strong>{{ warning.field }}</strong>: {{ warning.message }}</li>
+            {% else %}
+              <li>No missing-information warnings.</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="panel">
+          <h2>Risk Flags</h2>
+          <ul>
+            {% for flag in risks %}
+              <li><strong>{{ flag.category }}</strong>: {{ flag.message }}</li>
+            {% else %}
+              <li>No risk flags.</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="panel">
+          <h2>Quote Placeholders</h2>
+          <ul>
+            {% for item in placeholders %}
+              <li>{{ item }}</li>
+            {% else %}
+              <li>No quote placeholders.</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="panel">
+          <h2>Improvement Suggestions</h2>
+          <ul>
+            {% for item in package.improvement_suggestions %}
+              <li>{{ item }}</li>
+            {% else %}
+              <li>No improvement suggestions returned.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Final Draft</h2>
+        <pre>{{ package.final_markdown_draft }}</pre>
+      </section>
+    </main>
+  </body>
+</html>
