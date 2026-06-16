@@ -1,0 +1,137 @@
+[
+  {
+    "id": "happy_path",
+    "input": {
+      "customer_name": "Acme Bank",
+      "industry": "Financial services",
+      "target_audience": "CIOs and operations leaders",
+      "challenge": "Manual onboarding reviews delayed enterprise account launches and scattered approval evidence.",
+      "solution_summary": "A workflow automation program centralized onboarding tasks, approval routing, and evidence capture.",
+      "product_or_service": "LaunchFlow onboarding automation",
+      "implementation_notes": "The rollout started with one business unit, mapped approval steps, and trained operations managers.",
+      "results": "Enterprise account launch time decreased and operations teams gained a clearer audit trail.",
+      "metrics": [
+        {
+          "label": "Launch cycle reduction",
+          "value": "32%",
+          "baseline": "Average launch cycle before rollout",
+          "after": "Average launch cycle after rollout",
+          "source": "Internal implementation report"
+        }
+      ],
+      "customer_quotes": ["The workflow gave our operations leads one place to manage launch evidence."],
+      "source_notes": "Internal implementation report and customer interview notes.",
+      "brand_voice": "clear executive practical",
+      "tone": "executive",
+      "cta_goal": "Book an onboarding workflow assessment"
+    },
+    "expected": {
+      "status": "approve",
+      "pass_status": "pass",
+      "requires_metric_highlights": true
+    }
+  },
+  {
+    "id": "missing_metrics",
+    "input": {
+      "customer_name": "Northstar Clinics",
+      "industry": "Healthcare services",
+      "target_audience": "Operations directors",
+      "challenge": "Clinic managers had inconsistent handoff notes and slow scheduling follow-up.",
+      "solution_summary": "A workflow redesign centralized appointment follow-up and task ownership.",
+      "implementation_notes": "The team piloted the workflow at two clinics and trained scheduling coordinators.",
+      "results": "Teams reported better follow-up consistency and clearer ownership.",
+      "source_notes": "Workshop notes from operations team.",
+      "tone": "professional",
+      "cta_goal": "Request a workflow review"
+    },
+    "expected": {
+      "status": "revise",
+      "warning_field": "metrics"
+    }
+  },
+  {
+    "id": "unsupported_claim",
+    "input": {
+      "customer_name": "BrightWorks",
+      "industry": "Manufacturing",
+      "target_audience": "COOs",
+      "challenge": "Production leaders lacked visibility into recurring workflow bottlenecks.",
+      "solution_summary": "A process intelligence engagement mapped bottlenecks and created a review cadence.",
+      "implementation_notes": "The team reviewed plant-level workflow notes with supervisors.",
+      "results": "The program guaranteed 10x ROI with no evidence and was legally approved.",
+      "tone": "executive",
+      "cta_goal": "Schedule an operational review"
+    },
+    "expected": {
+      "status": "reject",
+      "risk_category": "unsupported_claim"
+    }
+  },
+  {
+    "id": "quote_placeholder",
+    "input": {
+      "customer_name": "Metro Retail",
+      "industry": "Retail",
+      "target_audience": "Revenue operations leaders",
+      "challenge": "Campaign teams lacked a consistent way to route offer changes for approval.",
+      "solution_summary": "A campaign operations workflow gave merchandising and revenue teams shared approval visibility.",
+      "implementation_notes": "The workflow was piloted with seasonal promotion planning.",
+      "results": "Teams reduced approval confusion and improved launch readiness.",
+      "metrics": [
+        {
+          "label": "Approval handoff reduction",
+          "value": "18%",
+          "source": "Campaign operations tracker"
+        }
+      ],
+      "source_notes": "Campaign operations tracker.",
+      "tone": "conversational",
+      "cta_goal": "Talk to a campaign operations specialist"
+    },
+    "expected": {
+      "requires_quote_placeholders": true
+    }
+  },
+  {
+    "id": "confidential_customer",
+    "input": {
+      "customer_name": "Confidential SaaS Customer",
+      "anonymize_customer": true,
+      "industry": "B2B SaaS",
+      "target_audience": "Customer success leaders",
+      "challenge": "Success teams struggled to identify expansion-ready accounts from scattered notes.",
+      "solution_summary": "An account workflow organized signals, playbooks, and manager follow-up.",
+      "implementation_notes": "The team configured stages for account review and expansion planning.",
+      "results": "Managers gained clearer review discipline and faster follow-up.",
+      "metrics": [
+        {
+          "label": "Follow-up time improvement",
+          "value": "24%",
+          "source": "Internal customer success tracker"
+        }
+      ],
+      "source_notes": "Customer is confidential under NDA.",
+      "tone": "professional",
+      "cta_goal": "Request an account workflow consultation"
+    },
+    "expected": {
+      "status": "revise",
+      "risk_category": "confidentiality"
+    }
+  },
+  {
+    "id": "thin_input",
+    "input": {
+      "industry": "Technology",
+      "target_audience": "Leaders",
+      "challenge": "Slow",
+      "solution_summary": "AI",
+      "results": "Better"
+    },
+    "expected": {
+      "status": "reject",
+      "warning_field": "challenge"
+    }
+  }
+]

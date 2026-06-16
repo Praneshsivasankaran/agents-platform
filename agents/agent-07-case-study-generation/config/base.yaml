@@ -1,0 +1,139 @@
+# Agent 07 - Case Study Generation Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-07-case-study-generation
+
+agent:
+  id: agent-07
+  name: case-study-generation
+  version: 0.1.0
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    plan_case_study: cheap
+    draft_case_study: strong
+
+quality:
+  pass_threshold: 80
+  approve_threshold: 85
+  revise_min_threshold: 65
+  max_revision_attempts: 1
+
+runtime:
+  default_output_length: standard
+  anonymize_customer_default: false
+  require_source_for_metrics: true
+
+cost:
+  ceiling_inr: 25.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    plan_case_study: 1.0
+    draft_case_study: 6.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    plan_case_study: 4096
+    draft_case_study: 8192
+
+telemetry:
+  provider: stdout
+  service: agent-07-case-study-generation
+  extra_labels:
+    - intake_request
+    - normalize_input
+    - extract_evidence_and_metrics
+    - plan_case_study
+    - draft_case_study
+    - generate_quotes_and_ctas
+    - scan_claims_and_risks
+    - score_quality
+    - optional_revision_pass
+    - assemble_package
+    - intake_request.accepted
+    - intake_request.invalid
+    - normalize_input.complete
+    - extract_evidence_and_metrics.complete
+    - plan_case_study.complete
+    - draft_case_study.complete
+    - generate_quotes_and_ctas.complete
+    - scan_claims_and_risks.complete
+    - score_quality.complete
+    - optional_revision_pass.complete
+    - optional_revision_pass.applied
+    - assemble_package.complete
+    - route.decision
+    - node.error
+    - plan_case_study.provider_hiccup
+    - draft_case_study.provider_hiccup
+  dimensions:
+    node:
+      - intake_request
+      - normalize_input
+      - extract_evidence_and_metrics
+      - plan_case_study
+      - draft_case_study
+      - generate_quotes_and_ctas
+      - scan_claims_and_risks
+      - score_quality
+      - optional_revision_pass
+      - assemble_package
+    tier: [cheap, strong, stt]
+    provider: [mock, litellm, gcp, bedrock, azure]
+    status: [approve, revise, reject, running]
+    decision: [ok, error, cost_ceiling, reject]
+    target:
+      - normalize_input
+      - extract_evidence_and_metrics
+      - plan_case_study
+      - draft_case_study
+      - generate_quotes_and_ctas
+      - scan_claims_and_risks
+      - score_quality
+      - optional_revision_pass
+      - assemble_package
+  attr_keys:
+    - service
+    - run_id
+    - node
+    - span_id
+    - decision
+    - target
+    - status
+    - kind
+    - score
+    - metric_count
+    - risk_count
+  extra_metric_names:
+    - stage.cost_inr
+    - total.cost_inr
+    - quality.overall_score
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: case-study-generation/
+
+output_storage:
+  enabled: false
+  prefix: case-study-generation/v1/
+
+secret_store:
+  provider: env

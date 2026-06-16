@@ -1,0 +1,13 @@
+schema_validity: 1.0
+required_section_coverage: 0.9
+risk_behavior_accuracy: 0.9
+invented_metric_count: 0
+pass_threshold: 80
+cost_ceiling_inr: 25
+metrics:
+  - status
+  - pass_status
+  - warning_field
+  - risk_category
+  - requires_metric_highlights
+  - requires_quote_placeholders

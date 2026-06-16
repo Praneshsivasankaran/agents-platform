@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 07 Case Study Generation</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Agent 07 Case Study Generation</h1>
+          <p class="subtle">Provider: <strong>{{ provider_mode }}</strong>{% if provider_mode == "mock" %} - offline test mode{% else %} - GCP live{% endif %}</p>
+        </div>
+      </header>
+
+      {% if missing_gcp_env %}
+        <section class="notice danger">
+          GCP live mode is selected but missing: {{ ", ".join(missing_gcp_env) }}.
+        </section>
+      {% endif %}
+
+      <form class="form-grid" action="/generate" method="post">
+        <section class="panel span-2">
+          <h2>Customer Story</h2>
+          <div class="two-col">
+            <label>
+              Customer name
+              <input name="customer_name" value="Acme Bank">
+            </label>
+            <label>
+              Industry
+              <input name="industry" required value="Financial services">
+            </label>
+          </div>
+          <label class="check-row">
+            <input type="checkbox" name="anonymize_customer">
+            <span>Anonymize customer</span>
+          </label>
+          <label>
+            Target audience
+            <input name="target_audience" required value="CIOs and operations leaders">
+          </label>
+          <label>
+            Challenge
+            <textarea name="challenge" required rows="3">Manual onboarding reviews delayed enterprise account launches and scattered approval evidence.</textarea>
+          </label>
+          <label>
+            Solution summary
+            <textarea name="solution_summary" required rows="3">A workflow automation program centralized onboarding tasks, approval routing, and evidence capture.</textarea>
+          </label>
+          <label>
+            Product or service
+            <input name="product_or_service" value="LaunchFlow onboarding automation">
+          </label>
+        </section>
+
+        <section class="panel">
+          <h2>Evidence</h2>
+          <label>
+            Implementation notes
+            <textarea name="implementation_notes" rows="5">The rollout started with one business unit, mapped approval steps, and trained operations managers.</textarea>
+          </label>
+          <label>
+            Results
+            <textarea name="results" required rows="4">Enterprise account launch time decreased and operations teams gained a clearer audit trail.</textarea>
+          </label>
+          <label>
+            Metrics
+            <textarea name="metrics" rows="5">Launch cycle reduction | 32% | Internal implementation report | Average launch cycle before rollout | Average launch cycle after rollout</textarea>
+          </label>
+        </section>
+
+        <section class="panel">
+          <h2>Review Inputs</h2>
+          <label>
+            Customer quotes
+            <textarea name="customer_quotes" rows="4">The workflow gave our operations leads one place to manage launch evidence.</textarea>
+          </label>
+          <label>
+            Source notes
+            <textarea name="source_notes" rows="4">Internal implementation report and customer interview notes.</textarea>
+          </label>
+          <label>
+            Brand voice
+            <input name="brand_voice" value="clear executive practical">
+          </label>
+          <div class="two-col">
+            <label>
+              Tone
+              <select name="tone">
+                <option value="professional">Professional</option>
+                <option value="executive" selected>Executive</option>
+                <option value="technical">Technical</option>
+                <option value="conversational">Conversational</option>
+              </select>
+            </label>
+            <label>
+              Output length
+              <select name="output_length">
+                <option value="short">Short</option>
+                <option value="standard" selected>Standard</option>
+                <option value="long">Long</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            CTA goal
+            <input name="cta_goal" value="Book an onboarding workflow assessment">
+          </label>
+        </section>
+
+        <div class="actions span-2">
+          <button type="submit">Generate Package</button>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>
