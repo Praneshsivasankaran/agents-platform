@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent 06 Whitepaper Development</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Agent 06 Whitepaper Development</h1>
+          <p class="subtle">Provider: <strong>{{ provider_mode }}</strong>{% if provider_mode == "mock" %} · offline test mode{% else %} · GCP live{% endif %}</p>
+        </div>
+      </header>
+
+      {% if missing_gcp_env %}
+        <section class="notice danger">
+          GCP live mode is selected but missing: {{ ", ".join(missing_gcp_env) }}.
+        </section>
+      {% endif %}
+
+      <form class="form-grid" action="/develop" method="post">
+        <section class="panel span-2">
+          <h2>Required Context</h2>
+          <label>
+            Topic
+            <input name="topic" required value="AI governance operating model">
+          </label>
+          <label>
+            Company/product context
+            <textarea name="company_context" required rows="4">Acme PolicyOS helps compliance teams manage AI policy reviews, route approvals, capture evidence, and maintain governance records.</textarea>
+          </label>
+          <div class="two-col">
+            <label>
+              Target audience
+              <input name="target_audience" required value="CIOs and compliance leaders">
+            </label>
+            <label>
+              Industry
+              <input name="industry" required value="Financial services">
+            </label>
+          </div>
+          <label>
+            Problem
+            <textarea name="problem" required rows="3">AI initiatives are slowed by manual policy review, unclear ownership, and scattered evidence collection.</textarea>
+          </label>
+          <label>
+            Solution
+            <textarea name="solution" required rows="3">A workflow platform for AI policy intake, review routing, evidence capture, and approval tracking.</textarea>
+          </label>
+          <div class="two-col">
+            <label>
+              Tone
+              <input name="tone" required value="executive, precise, and practical">
+            </label>
+            <label>
+              Target depth
+              <input name="target_depth" required value="detailed B2B whitepaper package">
+            </label>
+          </div>
+          <label>
+            CTA
+            <input name="cta" required value="Book a governance readiness workshop">
+          </label>
+        </section>
+
+        <section class="panel">
+          <h2>Evidence</h2>
+          <label>
+            Proof points
+            <textarea name="proof_points" rows="5">Internal pilot centralized review evidence across three policy teams</textarea>
+          </label>
+          <label>
+            Source notes
+            <textarea name="source_notes" rows="5">Internal product brief approved by compliance SME</textarea>
+          </label>
+        </section>
+
+        <section class="panel">
+          <h2>Review Constraints</h2>
+          <label>
+            Differentiators
+            <textarea name="differentiators" rows="4">role-based review routing, evidence capture, approval tracking</textarea>
+          </label>
+          <label>
+            Objections
+            <textarea name="objections" rows="4">Buyers may worry about adoption effort and legal review overhead</textarea>
+          </label>
+          <label>
+            Compliance/legal constraints
+            <textarea name="compliance_constraints" rows="4">Avoid legal advice claims</textarea>
+          </label>
+          <label>
+            Excluded claims
+            <textarea name="excluded_claims" rows="3">Do not claim external legal compliance certification</textarea>
+          </label>
+        </section>
+
+        <div class="actions span-2">
+          <button type="submit">Develop Package</button>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>

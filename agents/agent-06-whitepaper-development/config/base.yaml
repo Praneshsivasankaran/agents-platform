@@ -1,0 +1,131 @@
+# Agent 06 - Whitepaper Development Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-06-whitepaper-development
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    normalize_context: cheap
+    plan_angle: cheap
+    generate_outline: cheap
+    draft_sections: strong
+
+cost:
+  ceiling_inr: 50.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    normalize_context: 1.0
+    plan_angle: 1.5
+    generate_outline: 2.0
+    draft_sections: 8.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    normalize_context: 2048
+    plan_angle: 2048
+    generate_outline: 4096
+    draft_sections: 8192
+
+telemetry:
+  provider: stdout
+  service: agent-06-whitepaper-development
+  extra_labels:
+    - intake_validate
+    - normalize_context
+    - plan_angle
+    - map_evidence
+    - generate_outline
+    - draft_sections
+    - review_claims
+    - detect_generic_content
+    - score_quality
+    - assemble_package
+    - intake_validate.accepted
+    - intake_validate.invalid
+    - normalize_context.complete
+    - plan_angle.complete
+    - map_evidence.complete
+    - generate_outline.complete
+    - draft_sections.complete
+    - review_claims.complete
+    - detect_generic_content.complete
+    - score_quality.complete
+    - assemble_package.complete
+    - route.decision
+    - node.error
+    - normalize_context.provider_hiccup
+    - plan_angle.provider_hiccup
+    - generate_outline.provider_hiccup
+    - draft_sections.provider_hiccup
+  dimensions:
+    node:
+      - intake_validate
+      - normalize_context
+      - plan_angle
+      - map_evidence
+      - generate_outline
+      - draft_sections
+      - review_claims
+      - detect_generic_content
+      - score_quality
+      - assemble_package
+    tier: [cheap, strong, stt]
+    provider: [mock, litellm, gcp, bedrock, azure]
+    status: [pass, needs_more_input, needs_human, needs_review_budget_limited, stopped_cost_ceiling, error, running]
+    decision: [ok, error, cost_ceiling, needs_more_input]
+    target:
+      - normalize_context
+      - plan_angle
+      - map_evidence
+      - generate_outline
+      - draft_sections
+      - review_claims
+      - detect_generic_content
+      - score_quality
+      - assemble_package
+  attr_keys:
+    - service
+    - run_id
+    - node
+    - span_id
+    - decision
+    - target
+    - status
+    - kind
+    - score
+    - evidence_count
+    - claim_count
+    - generic_flags
+  extra_metric_names:
+    - stage.cost_inr
+    - total.cost_inr
+    - quality.overall_score
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: whitepaper-development/
+
+output_storage:
+  enabled: false
+  prefix: whitepaper-development/v1/
+
+secret_store:
+  provider: env
