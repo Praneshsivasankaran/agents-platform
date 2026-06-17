@@ -1,0 +1,62 @@
+# Agent 17 - Landing Page Optimization Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-17-landing-page-optimization
+
+agent:
+  id: agent-17
+  name: landing-page-optimization
+  version: 0.1.0
+  billable_stage: generate_landing_page_brief
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    generate_landing_page_brief: strong
+
+quality:
+  pass_threshold: 82
+  approve_threshold: 88
+  revise_min_threshold: 65
+
+cost:
+  ceiling_inr: 40.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    generate_landing_page_brief: 6.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    generate_landing_page_brief: 8192
+
+telemetry:
+  provider: stdout
+  service: agent-17-landing-page-optimization
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: landing-page-optimization/
+
+output_storage:
+  enabled: false
+  prefix: landing-page-optimization/v1/
+
+secret_store:
+  provider: env

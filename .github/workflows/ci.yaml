@@ -136,6 +136,39 @@ jobs:
           PYTHONPATH=packages:agents/${{ matrix.agent }} \
           python -m pytest agents/${{ matrix.agent }}/tests -q
 
+  # Digital Marketing batch (Agents 15-21) - offline/mock gates.
+  # These agents are thin wrappers over packages/digital_marketing (shared workflow,
+  # tools, scoring, prompts). The shared package holds the real agent logic, so it is
+  # guarded for cloud-SDK imports here in addition to the agents/*/agent auto-discovery.
+  digital-marketing-offline:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        agent:
+          - agent-15-keyword-research
+          - agent-16-ad-copy-creation
+          - agent-17-landing-page-optimization
+          - agent-18-paid-campaign-optimization
+          - agent-19-multi-channel-campaign-planning
+          - agent-20-conversion-rate-optimization
+          - agent-21-performance-reporting
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies (version floors)
+        run: pip install -r requirements.txt
+
+      - name: Shared digital_marketing cloud-SDK guard + unit tests
+        run: PYTHONPATH=packages python -m pytest packages/digital_marketing/tests -q
+
+      - name: ${{ matrix.agent }} tests (offline/mock)
+        run: |
+          PYTHONPATH=packages:agents/${{ matrix.agent }} \
+          python -m pytest agents/${{ matrix.agent }}/tests -q
+
   # Live smoke gate — genuine required pre-merge gate.
   # Runs only in the merge queue (trusted, PR-approved code) or on direct push to main.
   # Fork PRs never have secrets; they cannot reach this job (no silent skip via condition).

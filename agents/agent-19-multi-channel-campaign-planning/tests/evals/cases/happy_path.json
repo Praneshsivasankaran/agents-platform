@@ -1,0 +1,18 @@
+{
+  "id": "agent19_happy_path",
+  "input": {
+    "campaign_goal": "Launch RevOps benchmark campaign",
+    "target_audience": "RevOps leaders",
+    "offer": "Benchmark assessment",
+    "timeline": "Six-week launch window",
+    "channels": ["paid search", "email", "LinkedIn", "landing page"],
+    "content_inventory": ["benchmark report", "case study", "email sequence"],
+    "owner_notes": ["Paid: Mira", "Web: Dev", "Email: Ops"],
+    "source_notes": "Campaign recommendation approved by marketing lead."
+  },
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": ["Channel strategy", "Measurement plan"]
+  }
+}

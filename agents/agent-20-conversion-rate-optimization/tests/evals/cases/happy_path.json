@@ -1,0 +1,20 @@
+{
+  "id": "agent20_happy_path",
+  "input": {
+    "conversion_goal": "Increase demo request submissions",
+    "target_audience": "RevOps leaders",
+    "page_notes": "Users drop near the proof and pricing section.",
+    "metric_summary": "Visitors 1000, form starts 120, submissions 45.",
+    "funnel_stages": [
+      {"stage": "Visitors", "count": 1000},
+      {"stage": "Form starts", "count": 120},
+      {"stage": "Submissions", "count": 45}
+    ],
+    "source_notes": "Supplied landing page findings and funnel summary."
+  },
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": ["Hypothesis backlog", "Measurement plan"]
+  }
+}

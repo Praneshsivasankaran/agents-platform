@@ -1,0 +1,16 @@
+{
+  "id": "agent16_happy_path",
+  "input": {
+    "campaign_goal": "Generate demo requests",
+    "target_audience": "RevOps leaders",
+    "offer": "Lead handoff maturity assessment",
+    "brand_voice": "Clear and practical",
+    "platforms": ["Google Search", "LinkedIn"],
+    "source_notes": "Approved proof: customers reduce manual handoff review time after workflow automation."
+  },
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": ["Search ad variants", "Claim evidence map"]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "agent18_no_data",
+  "input": {
+    "campaign_goal": "Improve paid search CPA",
+    "platforms": ["Google Ads"]
+  },
+  "expected": {
+    "status": "needs_human",
+    "risk_category": "missing_required_context",
+    "no_recommendations": true
+  }
+}

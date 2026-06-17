@@ -1,0 +1,62 @@
+# Agent 21 - Performance Reporting Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-21-performance-reporting
+
+agent:
+  id: agent-21
+  name: performance-reporting
+  version: 0.1.0
+  billable_stage: generate_performance_report
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    generate_performance_report: strong
+
+quality:
+  pass_threshold: 84
+  approve_threshold: 90
+  revise_min_threshold: 68
+
+cost:
+  ceiling_inr: 45.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    generate_performance_report: 7.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    generate_performance_report: 8192
+
+telemetry:
+  provider: stdout
+  service: agent-21-performance-reporting
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: performance-reporting/
+
+output_storage:
+  enabled: false
+  prefix: performance-reporting/v1/
+
+secret_store:
+  provider: env

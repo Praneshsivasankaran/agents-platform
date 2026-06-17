@@ -1,0 +1,16 @@
+{
+  "id": "agent15_happy_path",
+  "input": {
+    "product_or_service": "Revenue workflow automation",
+    "campaign_goal": "Build paid search plan",
+    "target_audience": "RevOps leaders",
+    "keywords": ["lead routing automation", "revops workflow", "crm handoff"],
+    "metrics": [{"label": "Search volume", "value": "500/month", "source": "User spreadsheet"}],
+    "source_notes": "User supplied keyword spreadsheet and ICP notes."
+  },
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": ["Keyword clusters", "Missing metric warnings"]
+  }
+}

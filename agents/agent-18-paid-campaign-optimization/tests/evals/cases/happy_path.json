@@ -1,0 +1,18 @@
+{
+  "id": "agent18_happy_path",
+  "input": {
+    "campaign_goal": "Improve paid search CPA",
+    "platforms": ["Google Ads"],
+    "metric_summary": "Spend Rs 120000, clicks 3200, conversions 80, CPA Rs 1500.",
+    "metrics": [
+      {"label": "Spend", "value": "Rs 120000", "source": "User export"},
+      {"label": "Conversions", "value": "80", "source": "User export"}
+    ],
+    "source_notes": "User supplied paid search export summary."
+  },
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": ["Optimization findings", "Missing denominator warnings"]
+  }
+}

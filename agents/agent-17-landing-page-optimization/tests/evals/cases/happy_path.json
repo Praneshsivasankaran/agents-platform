@@ -1,0 +1,16 @@
+{
+  "id": "agent17_happy_path",
+  "input": {
+    "campaign_goal": "Increase demo requests",
+    "target_audience": "RevOps leaders",
+    "offer": "Workflow assessment",
+    "page_copy": "Hero: Fix handoff delays. CTA: Book an assessment. Proof: customer operations quote.",
+    "form_fields": ["name", "work email", "company"],
+    "source_notes": "Supplied page copy and campaign brief."
+  },
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": ["Message-match review", "Form friction review"]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "agent21_happy_path",
+  "input": {
+    "campaign_goal": "Report paid search launch performance",
+    "reporting_period": "May 2026",
+    "metric_summary": "Impressions 10000, clicks 500, conversions 40, spend Rs 60000.",
+    "metrics": [
+      {"label": "Impressions", "value": "10000", "source": "User report"},
+      {"label": "Clicks", "value": "500", "source": "User report"},
+      {"label": "Conversions", "value": "40", "source": "User report"}
+    ],
+    "channel_summaries": "Paid search performed steadily; LinkedIn volume was lower than expected.",
+    "source_notes": "User supplied campaign report summary."
+  },
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": ["Executive summary", "KPI scorecard"]
+  }
+}
