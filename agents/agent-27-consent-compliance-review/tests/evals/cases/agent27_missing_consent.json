@@ -1,0 +1,14 @@
+{
+    "input":  {
+                  "region":  "EU",
+                  "channels":  [
+                                   "email"
+                               ],
+                  "compliance_context":  "Webinar compliance review"
+              },
+    "id":  "agent27_missing_consent",
+    "expected":  {
+                     "risk_category":  "missing_required_context",
+                     "status":  "needs_human"
+                 }
+}

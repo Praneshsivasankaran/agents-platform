@@ -1,0 +1,26 @@
+{
+    "input":  {
+                  "approval_context":  "Legal review for EU",
+                  "message_context":  "Educational invite",
+                  "suppression_context":  "Suppress unsubscribed",
+                  "compliance_context":  "Webinar compliance review",
+                  "channels":  [
+                                   "email"
+                               ],
+                  "region":  "US and EU",
+                  "privacy_notes":  "No PII in URLs",
+                  "consent_context":  "Opt-in only"
+              },
+    "id":  "agent27_happy_path",
+    "expected":  {
+                     "requires_recommendations":  true,
+                     "status":  "pass",
+                     "section_names":  [
+                                           "not_legal_advice_boundary"
+                                       ],
+                     "item_types":  [
+                                        "Mitigation checklist",
+                                        "Not legal advice statement"
+                                    ]
+                 }
+}

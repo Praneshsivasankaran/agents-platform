@@ -1,0 +1,15 @@
+{
+    "input":  {
+                  "channels":  [
+                                   "email"
+                               ],
+                  "offer":  "Readiness checklist",
+                  "target_audience":  "RevOps leaders",
+                  "timeline":  "June launch"
+              },
+    "id":  "agent22_missing_objective",
+    "expected":  {
+                     "risk_category":  "missing_required_context",
+                     "status":  "needs_human"
+                 }
+}

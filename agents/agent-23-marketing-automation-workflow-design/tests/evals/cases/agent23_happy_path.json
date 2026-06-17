@@ -1,0 +1,30 @@
+{
+    "input":  {
+                  "asset_inventory":  "Three emails",
+                  "workflow_context":  "Email nurture",
+                  "suppression_context":  "Suppress unsubscribed",
+                  "offer":  "Webinar",
+                  "qa_requirements":  [
+                                          "entry criteria",
+                                          "suppression",
+                                          "exit"
+                                      ],
+                  "trigger_event":  "Registration form submit",
+                  "consent_context":  "Opt-in only",
+                  "message_sequence":  "Invite, reminder, follow-up",
+                  "workflow_objective":  "Nurture webinar registrants",
+                  "target_audience":  "Opted-in RevOps leaders"
+              },
+    "id":  "agent23_happy_path",
+    "expected":  {
+                     "requires_recommendations":  true,
+                     "status":  "pass",
+                     "section_names":  [
+                                           "workflow_map"
+                                       ],
+                     "item_types":  [
+                                        "Workflow map",
+                                        "QA test cases"
+                                    ]
+                 }
+}

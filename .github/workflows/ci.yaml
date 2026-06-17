@@ -169,6 +169,39 @@ jobs:
           PYTHONPATH=packages:agents/${{ matrix.agent }} \
           python -m pytest agents/${{ matrix.agent }}/tests -q
 
+  # Marketing Operations batch (Agents 22-28) - offline/mock gates.
+  # These agents are thin wrappers over packages/marketing_operations (shared workflow,
+  # tools, scoring, prompts). The shared package holds the real agent logic, so it is
+  # guarded for cloud-SDK imports here in addition to the agents/*/agent auto-discovery.
+  marketing-operations-offline:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        agent:
+          - agent-22-campaign-intake-brief-qa
+          - agent-23-marketing-automation-workflow-design
+          - agent-24-crm-map-data-hygiene
+          - agent-25-utm-tracking-governance
+          - agent-26-lead-routing-sla-design
+          - agent-27-consent-compliance-review
+          - agent-28-campaign-launch-readiness-qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies (version floors)
+        run: pip install -r requirements.txt
+
+      - name: Shared marketing_operations cloud-SDK guard + unit tests
+        run: PYTHONPATH=packages python -m pytest packages/marketing_operations/tests -q
+
+      - name: ${{ matrix.agent }} tests (offline/mock)
+        run: |
+          PYTHONPATH=packages:agents/${{ matrix.agent }} \
+          python -m pytest agents/${{ matrix.agent }}/tests -q
+
   # Live smoke gate — genuine required pre-merge gate.
   # Runs only in the merge queue (trusted, PR-approved code) or on direct push to main.
   # Fork PRs never have secrets; they cannot reach this job (no silent skip via condition).

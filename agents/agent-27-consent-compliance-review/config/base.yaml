@@ -1,0 +1,62 @@
+# Agent 27 - Consent & Compliance Review Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-27-consent-compliance-review
+
+agent:
+  id: agent-27
+  name: consent-compliance-review
+  version: 0.1.0
+  billable_stage: generate_compliance_review
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    generate_compliance_review: strong
+
+quality:
+  pass_threshold: 84
+  approve_threshold: 90
+  revise_min_threshold: 68
+
+cost:
+  ceiling_inr: 45.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    generate_compliance_review: 6.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    generate_compliance_review: 9216
+
+telemetry:
+  provider: stdout
+  service: agent-27-consent-compliance-review
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: consent-compliance-review/
+
+output_storage:
+  enabled: false
+  prefix: consent-compliance-review/v1/
+
+secret_store:
+  provider: env

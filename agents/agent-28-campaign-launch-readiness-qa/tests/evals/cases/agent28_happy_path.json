@@ -1,0 +1,30 @@
+{
+    "input":  {
+                  "launch_checklist":  "Assets approved and workflow QA complete",
+                  "tracking_context":  "Tracking plan supplied",
+                  "workflow_context":  "Workflow QA complete",
+                  "qa_results":  "No critical issues",
+                  "campaign_objective":  "Launch webinar demand campaign",
+                  "compliance_context":  "Compliance review supplied; all risks closed",
+                  "consent_context":  "Opt-in only",
+                  "timeline":  "June launch",
+                  "owner_action_list":  "Maya owns final human approval",
+                  "channels":  [
+                                   "email",
+                                   "paid social"
+                               ],
+                  "approval_context":  "Human launch owner approval required"
+              },
+    "id":  "agent28_happy_path",
+    "expected":  {
+                     "requires_recommendations":  true,
+                     "status":  "pass",
+                     "section_names":  [
+                                           "launch_readiness_score"
+                                       ],
+                     "item_types":  [
+                                        "Launch readiness score",
+                                        "Owner action list"
+                                    ]
+                 }
+}

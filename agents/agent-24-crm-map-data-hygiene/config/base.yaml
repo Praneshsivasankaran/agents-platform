@@ -1,0 +1,62 @@
+# Agent 24 - CRM/MAP Data Hygiene Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-24-crm-map-data-hygiene
+
+agent:
+  id: agent-24
+  name: crm-map-data-hygiene
+  version: 0.1.0
+  billable_stage: generate_data_hygiene_plan
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    generate_data_hygiene_plan: strong
+
+quality:
+  pass_threshold: 84
+  approve_threshold: 90
+  revise_min_threshold: 68
+
+cost:
+  ceiling_inr: 45.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    generate_data_hygiene_plan: 6.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    generate_data_hygiene_plan: 9216
+
+telemetry:
+  provider: stdout
+  service: agent-24-crm-map-data-hygiene
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: crm-map-data-hygiene/
+
+output_storage:
+  enabled: false
+  prefix: crm-map-data-hygiene/v1/
+
+secret_store:
+  provider: env

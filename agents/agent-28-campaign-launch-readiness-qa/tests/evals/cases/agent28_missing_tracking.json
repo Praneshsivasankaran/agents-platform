@@ -1,0 +1,16 @@
+{
+    "input":  {
+                  "consent_context":  "Opt-in only",
+                  "campaign_objective":  "Launch webinar demand campaign",
+                  "channels":  [
+                                   "email"
+                               ],
+                  "timeline":  "June launch",
+                  "compliance_context":  "Compliance review supplied"
+              },
+    "id":  "agent28_missing_tracking",
+    "expected":  {
+                     "risk_category":  "missing_required_context",
+                     "status":  "needs_human"
+                 }
+}

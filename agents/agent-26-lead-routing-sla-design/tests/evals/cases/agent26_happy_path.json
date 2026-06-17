@@ -1,0 +1,27 @@
+{
+    "input":  {
+                  "territory_context":  "NA and EMEA",
+                  "segment_context":  "Enterprise and mid-market",
+                  "queue_context":  "Regional queues",
+                  "capacity_context":  "Friday coverage noted",
+                  "owner_context":  "SDR queue owners",
+                  "score_context":  "Hot 80+",
+                  "routing_objective":  "Route webinar leads",
+                  "sla_expectations":  "Hot in 2 hours",
+                  "routing_rules":  [
+                                        "hot enterprise to SDR queue"
+                                    ]
+              },
+    "id":  "agent26_happy_path",
+    "expected":  {
+                     "requires_recommendations":  true,
+                     "status":  "pass",
+                     "section_names":  [
+                                           "routing_matrix"
+                                       ],
+                     "item_types":  [
+                                        "Routing matrix",
+                                        "SLA definitions"
+                                    ]
+                 }
+}

@@ -1,0 +1,23 @@
+{
+    "input":  {
+                  "field_list":  "email, lifecycle_stage, owner_id, consent_status",
+                  "sample_summary":  "8 percent missing country; no row-level records supplied",
+                  "mapping_notes":  "CRM lifecycle maps to MAP person status",
+                  "data_hygiene_objective":  "Prepare routing fields",
+                  "system_context":  "Salesforce and HubSpot",
+                  "issue_summary":  "Country value completeness summary supplied",
+                  "owner_context":  "RevOps steward"
+              },
+    "id":  "agent24_happy_path",
+    "expected":  {
+                     "requires_recommendations":  true,
+                     "status":  "pass",
+                     "section_names":  [
+                                           "data_quality_findings"
+                                       ],
+                     "item_types":  [
+                                        "Data quality findings",
+                                        "Cleanup backlog"
+                                    ]
+                 }
+}

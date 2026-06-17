@@ -1,0 +1,62 @@
+# Agent 28 - Campaign Launch Readiness QA Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-28-campaign-launch-readiness-qa
+
+agent:
+  id: agent-28
+  name: campaign-launch-readiness-qa
+  version: 0.1.0
+  billable_stage: generate_launch_readiness_qa
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    generate_launch_readiness_qa: strong
+
+quality:
+  pass_threshold: 85
+  approve_threshold: 91
+  revise_min_threshold: 70
+
+cost:
+  ceiling_inr: 50.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    generate_launch_readiness_qa: 7.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    generate_launch_readiness_qa: 10240
+
+telemetry:
+  provider: stdout
+  service: agent-28-campaign-launch-readiness-qa
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: campaign-launch-readiness-qa/
+
+output_storage:
+  enabled: false
+  prefix: campaign-launch-readiness-qa/v1/
+
+secret_store:
+  provider: env

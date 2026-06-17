@@ -1,0 +1,23 @@
+{
+    "input":  {
+                  "launch_checklist":  "Consent blocker still open",
+                  "campaign_objective":  "Launch webinar demand campaign",
+                  "compliance_context":  "Agent 27 hard_fail unresolved blocker for consent",
+                  "channels":  [
+                                   "email"
+                               ],
+                  "consent_context":  "Opt-in only",
+                  "owner_action_list":  "Maya owns follow-up",
+                  "timeline":  "June launch",
+                  "tracking_context":  "Tracking supplied"
+              },
+    "id":  "agent28_upstream_blocker",
+    "expected":  {
+                     "no_recommendations":  true,
+                     "status":  "needs_human",
+                     "flagged_terms":  [
+                                           "hard_fail"
+                                       ],
+                     "risk_category":  "blocker_preservation"
+                 }
+}

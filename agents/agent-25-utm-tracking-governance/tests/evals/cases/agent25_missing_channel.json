@@ -1,0 +1,12 @@
+{
+    "input":  {
+                  "destination_context":  "Webinar landing page",
+                  "campaign_objective":  "Track webinar campaign",
+                  "measurement_goal":  "Attribute registrations"
+              },
+    "id":  "agent25_missing_channel",
+    "expected":  {
+                     "risk_category":  "missing_required_context",
+                     "status":  "needs_human"
+                 }
+}

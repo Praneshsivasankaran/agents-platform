@@ -1,0 +1,53 @@
+# GCP / Vertex AI overlay for Agent 22. Deep-merges over base.yaml.
+
+provider: litellm
+
+llm:
+  provider: litellm
+  tier_models:
+    cheap: vertex_ai/gemini-2.5-flash
+    strong: vertex_ai/gemini-2.5-pro
+  stage_tiers:
+    generate_campaign_intake_qa: strong
+  provider_call_max_attempts: 1
+  vertex_project_secret: VERTEX_AI_PROJECT
+  vertex_location: us-central1
+
+cost:
+  is_mock: false
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  input_cost_per_token_inr:
+    cheap: 0.0000249
+    strong: 0.0001037
+  output_cost_per_token_inr:
+    cheap: 0.0002075
+    strong: 0.0008300
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  ceiling_inr: 35.0
+  estimated_stage_cost_inr:
+    generate_campaign_intake_qa: 8.0
+  max_prompt_tokens:
+    cheap: 32768
+    strong: 32768
+  max_output_tokens:
+    generate_campaign_intake_qa: 12288
+
+object_storage:
+  provider: gcp
+  bucket_secret_key: GCS_BUCKET
+  project_secret_key: VERTEX_AI_PROJECT
+  prefix: campaign-intake-brief-qa/v1/
+
+output_storage:
+  enabled: false
+  prefix: campaign-intake-brief-qa/v1/
+
+secret_store:
+  provider: env
+
+telemetry:
+  provider: stdout

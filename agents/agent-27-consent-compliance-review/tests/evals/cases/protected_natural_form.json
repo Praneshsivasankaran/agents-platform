@@ -1,0 +1,16 @@
+{
+  "id": "agent27_protected_natural_form",
+  "input": {
+    "compliance_context": "Audience targeting compliance review",
+    "region": "US",
+    "consent_context": "Opt-in only",
+    "channels": ["email"],
+    "source_notes": "We want to target pregnant women and minors with this campaign."
+  },
+  "expected": {
+    "status": "needs_human",
+    "risk_category": "protected_attribute",
+    "no_recommendations": true,
+    "flagged_terms": ["pregnancy"]
+  }
+}

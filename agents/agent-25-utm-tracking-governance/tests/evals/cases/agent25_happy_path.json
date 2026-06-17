@@ -1,0 +1,31 @@
+{
+    "input":  {
+                  "tracking_requirements":  [
+                                                "utm_source",
+                                                "utm_medium",
+                                                "registration event"
+                                            ],
+                  "channel_context":  "Email and LinkedIn",
+                  "campaign_objective":  "Track webinar campaign",
+                  "compliance_context":  "No PII in URLs",
+                  "channels":  [
+                                   "email",
+                                   "paid social"
+                               ],
+                  "measurement_goal":  "Attribute registrations",
+                  "destination_context":  "Webinar landing page",
+                  "tracking_context":  "UTMs and registration event"
+              },
+    "id":  "agent25_happy_path",
+    "expected":  {
+                     "requires_recommendations":  true,
+                     "status":  "pass",
+                     "section_names":  [
+                                           "utm_taxonomy"
+                                       ],
+                     "item_types":  [
+                                        "UTM taxonomy",
+                                        "Tracking QA checklist"
+                                    ]
+                 }
+}

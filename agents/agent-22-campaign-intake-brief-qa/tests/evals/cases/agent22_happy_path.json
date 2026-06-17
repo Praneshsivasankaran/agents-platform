@@ -1,0 +1,29 @@
+{
+    "input":  {
+                  "approval_context":  "Demand Gen and Legal approval",
+                  "tracking_context":  "UTM plan supplied",
+                  "asset_inventory":  "Landing page and emails",
+                  "offer":  "Readiness checklist",
+                  "campaign_objective":  "Launch partner webinar",
+                  "consent_context":  "Opt-in contacts only",
+                  "owner_context":  "Maya owns campaign",
+                  "timeline":  "June launch",
+                  "channels":  [
+                                   "email",
+                                   "paid social"
+                               ],
+                  "target_audience":  "RevOps leaders"
+              },
+    "id":  "agent22_happy_path",
+    "expected":  {
+                     "requires_recommendations":  true,
+                     "status":  "pass",
+                     "section_names":  [
+                                           "brief_completeness_score"
+                                       ],
+                     "item_types":  [
+                                        "Normalized campaign brief",
+                                        "Readiness recommendation"
+                                    ]
+                 }
+}

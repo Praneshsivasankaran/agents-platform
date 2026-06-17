@@ -1,0 +1,16 @@
+{
+    "input":  {
+                  "segment_context":  "Enterprise",
+                  "territory_context":  "NA territory conflict with EMEA capacity conflict",
+                  "routing_objective":  "Route webinar leads",
+                  "sla_expectations":  "Hot in 2 hours",
+                  "owner_context":  "SDR queue"
+              },
+    "id":  "agent26_routing_conflict",
+    "expected":  {
+                     "item_types":  [
+                                        "Conflict warnings"
+                                    ],
+                     "risk_category":  "routing_fairness"
+                 }
+}

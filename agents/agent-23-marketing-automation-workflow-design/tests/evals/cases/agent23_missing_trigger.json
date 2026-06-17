@@ -1,0 +1,13 @@
+{
+    "input":  {
+                  "consent_context":  "Opt-in only",
+                  "workflow_objective":  "Nurture webinar registrants",
+                  "offer":  "Webinar",
+                  "target_audience":  "Opted-in RevOps leaders"
+              },
+    "id":  "agent23_missing_trigger",
+    "expected":  {
+                     "risk_category":  "missing_required_context",
+                     "status":  "needs_human"
+                 }
+}

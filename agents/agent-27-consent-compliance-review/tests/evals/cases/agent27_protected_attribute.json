@@ -1,0 +1,20 @@
+{
+    "input":  {
+                  "region":  "US",
+                  "source_notes":  "Target by religion and health status.",
+                  "channels":  [
+                                   "email"
+                               ],
+                  "consent_context":  "Opt-in only",
+                  "compliance_context":  "Webinar compliance review"
+              },
+    "id":  "agent27_protected_attribute",
+    "expected":  {
+                     "no_recommendations":  true,
+                     "status":  "needs_human",
+                     "flagged_terms":  [
+                                           "religion"
+                                       ],
+                     "risk_category":  "protected_attribute"
+                 }
+}
