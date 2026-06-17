@@ -1,0 +1,28 @@
+{
+  "input": {
+    "campaign_goal": "Segment the ICP for a pipeline generation campaign.",
+    "icp_summary": "Enterprise SaaS companies with RevOps ownership, complex handoffs, and high lead volume.",
+    "business_context": "B2B SaaS platform expanding into enterprise revenue teams.",
+    "constraints": [
+      "Suppress customers and open opportunities",
+      "No protected-attribute targeting"
+    ],
+    "target_audience": "Demand generation and RevOps leaders",
+    "product_or_service": "Revenue workflow automation",
+    "audience_fields": [
+      "Company size tier",
+      "CRM maturity",
+      "Region",
+      "Buying committee role"
+    ]
+  },
+  "id": "happy_path",
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": [
+      "Overlap checks",
+      "Suppression rules"
+    ]
+  }
+}

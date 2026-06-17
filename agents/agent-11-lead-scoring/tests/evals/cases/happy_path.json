@@ -1,0 +1,30 @@
+{
+  "input": {
+    "segment_summary": "Accounts with high lead volume and active SDR operations.",
+    "campaign_goal": "Create an explainable lead scoring model for inbound and campaign leads.",
+    "icp_summary": "Enterprise SaaS companies with RevOps ownership and complex handoffs.",
+    "business_context": "B2B SaaS platform selling to enterprise revenue teams.",
+    "constraints": [
+      "No protected attributes",
+      "No closed-won outcome fields"
+    ],
+    "signals": [
+      "ICP fit: company size and CRM complexity",
+      "Engagement: demo page visit",
+      "Intent: pricing page visit",
+      "Negative: student or competitor email domain"
+    ],
+    "product_or_service": "Revenue workflow automation"
+  },
+  "id": "happy_path",
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": [
+      "Signal taxonomy",
+      "Weights",
+      "Score bands",
+      "Thresholds"
+    ]
+  }
+}

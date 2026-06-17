@@ -1,0 +1,17 @@
+{
+  "id": "raw_pii_record",
+  "input": {
+    "business_context": "B2B SaaS platform selling to enterprise revenue teams.",
+    "product_or_service": "Revenue workflow automation",
+    "icp_summary": "Enterprise SaaS companies with RevOps ownership and complex handoffs.",
+    "segment_summary": "Accounts with high lead volume and active SDR operations.",
+    "campaign_goal": "Create an explainable lead scoring model for inbound and campaign leads.",
+    "signals": ["ICP fit: company size and CRM complexity", "Engagement: demo page visit"],
+    "source_notes": "Raw record: priya@example.com visited pricing page twice.",
+    "constraints": ["No protected attributes", "No CRM updates"]
+  },
+  "expected": {
+    "status": "needs_human",
+    "risk_category": "data_quality"
+  }
+}

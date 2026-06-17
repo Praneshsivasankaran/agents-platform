@@ -1,0 +1,33 @@
+{
+  "input": {
+    "segment_summary": "RevOps-led accounts in active education stage.",
+    "content_inventory": [
+      "Benchmark report",
+      "Case study",
+      "ROI worksheet",
+      "Product guide"
+    ],
+    "campaign_goal": "Design a nurture journey for webinar attendees.",
+    "constraints": [
+      "Respect opt-out suppression",
+      "Human approval before messages"
+    ],
+    "business_context": "B2B SaaS platform nurturing RevOps prospects.",
+    "score_bands": [
+      "Hot: 80-100",
+      "Warm: 50-79",
+      "Cold: below 50"
+    ],
+    "product_or_service": "Revenue workflow automation"
+  },
+  "id": "happy_path",
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": [
+      "Journey map",
+      "Triggers and exits",
+      "Suppression rules"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "input": {
+    "product_or_service": "Revenue workflow automation",
+    "target_audience": "RevOps and demand generation leaders",
+    "business_context": "B2B SaaS platform selling to revenue operations teams.",
+    "icp_summary": "Mid-market and enterprise SaaS companies with complex handoffs.",
+    "segment_summary": "RevOps-led accounts with growing SDR teams and documented funnel leakage.",
+    "constraints": [
+      "No purchased contact lists",
+      "Human review before launch"
+    ],
+    "offer": "Benchmark assessment for lead handoff maturity",
+    "campaign_goal": "Create a lead generation campaign blueprint for Q3 pipeline."
+  },
+  "id": "happy_path",
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": [
+      "Capture path",
+      "Landing page brief"
+    ]
+  }
+}

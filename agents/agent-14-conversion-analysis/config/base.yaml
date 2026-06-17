@@ -1,0 +1,100 @@
+# Agent 14 - Conversion Analysis Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-14-conversion-analysis
+
+agent:
+  id: agent-14
+  name: conversion-analysis
+  version: 0.1.0
+  billable_stage: generate_conversion_insights
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    generate_conversion_insights: strong
+
+quality:
+  pass_threshold: 84
+  approve_threshold: 90
+  revise_min_threshold: 68
+
+cost:
+  ceiling_inr: 50.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    generate_conversion_insights: 5.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    generate_conversion_insights: 8192
+
+telemetry:
+  provider: stdout
+  service: agent-14-conversion-analysis
+  extra_labels:
+    - intake_request
+    - analyze_context
+    - generate_recommendations
+    - generate_conversion_insights
+    - score_quality
+    - assemble_package
+    - intake_request.accepted
+    - intake_request.invalid
+    - analyze_context.complete
+    - generate_conversion_insights.complete
+    - generate_conversion_insights.provider_hiccup
+    - score_quality.complete
+    - assemble_package.complete
+    - route.decision
+    - node.error
+  dimensions:
+    node: [intake_request, analyze_context, generate_recommendations, generate_conversion_insights, score_quality, assemble_package]
+    tier: [cheap, strong, none]
+    provider: [mock, litellm, gcp, bedrock, azure]
+    status: [pass, needs_human, stopped_cost_ceiling, error, running]
+    decision: [ok, invalid, error]
+    target: [analyze_context, generate_recommendations, generate_conversion_insights, score_quality, assemble_package]
+  attr_keys:
+    - node
+    - span_id
+    - decision
+    - target
+    - status
+    - kind
+    - score
+    - risk_count
+    - evidence_count
+    - missing_count
+  extra_metric_names:
+    - stage.cost_inr
+    - total.cost_inr
+    - quality.overall_score
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: conversion-analysis/
+
+output_storage:
+  enabled: false
+  prefix: conversion-analysis/v1/
+
+secret_store:
+  provider: env

@@ -99,6 +99,43 @@ jobs:
           PYTHONPATH=packages:agents/agent-01-blog-writer \
           python -m pytest apps/blog-ui/tests -q
 
+  # Demand Generation batch (Agents 08-14) — offline/mock gates.
+  # These agents are thin wrappers over packages/demand_generation (shared workflow,
+  # tools, scoring, prompts). The shared package holds the real agent logic, so it is
+  # guarded for cloud-SDK imports here in addition to the agents/*/agent auto-discovery.
+  demand-gen-offline:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        agent:
+          - agent-08-icp-identification
+          - agent-09-audience-segmentation
+          - agent-10-lead-generation
+          - agent-11-lead-scoring
+          - agent-12-campaign-recommendation
+          - agent-13-lead-nurturing
+          - agent-14-conversion-analysis
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies (version floors)
+        run: pip install -r requirements.txt
+
+      # Shared Demand Generation logic must not import cloud/model SDKs (it lives
+      # outside agents/*/agent so the auto-discovery guard does not reach it).
+      - name: Shared demand_generation cloud-SDK guard + unit tests
+        run: PYTHONPATH=packages python -m pytest packages/demand_generation/tests -q
+
+      # Each agent runs path-scoped so its own top-level ``agent`` package resolves
+      # (every agent ships a top-level ``agent`` package; do not put two on the path).
+      - name: ${{ matrix.agent }} tests (offline/mock)
+        run: |
+          PYTHONPATH=packages:agents/${{ matrix.agent }} \
+          python -m pytest agents/${{ matrix.agent }}/tests -q
+
   # Live smoke gate — genuine required pre-merge gate.
   # Runs only in the merge queue (trusted, PR-approved code) or on direct push to main.
   # Fork PRs never have secrets; they cannot reach this job (no silent skip via condition).

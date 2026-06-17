@@ -1,0 +1,16 @@
+{
+  "id": "audience_size_without_data",
+  "input": {
+    "business_context": "B2B SaaS platform expanding into enterprise revenue teams.",
+    "product_or_service": "Revenue workflow automation",
+    "icp_summary": "Enterprise SaaS companies with RevOps ownership, complex handoffs, and high lead volume.",
+    "campaign_goal": "Estimate audience size and segment the ICP for a pipeline generation campaign.",
+    "target_audience": "Demand generation and RevOps leaders",
+    "audience_fields": ["Company size tier", "CRM maturity", "Region", "Buying committee role"],
+    "constraints": ["Suppress customers and open opportunities", "No protected-attribute targeting"]
+  },
+  "expected": {
+    "status": "needs_human",
+    "risk_category": "data_quality"
+  }
+}

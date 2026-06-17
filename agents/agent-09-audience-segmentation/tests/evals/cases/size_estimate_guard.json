@@ -1,0 +1,18 @@
+{
+  "id": "size_estimate_guard",
+  "input": {
+    "icp_summary": "Enterprise SaaS companies with RevOps ownership.",
+    "campaign_goal": "Estimate audience size for the enterprise segment.",
+    "audience_fields": [
+      "Company size tier",
+      "CRM maturity"
+    ],
+    "business_context": "B2B SaaS platform expanding into enterprise revenue teams.",
+    "product_or_service": "Revenue workflow automation"
+  },
+  "expected": {
+    "status": "needs_human",
+    "risk_category": "data_quality",
+    "no_recommendations": true
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "input": {
+    "segment_summary": "Enterprise RevOps accounts with multi-team lead routing pain.",
+    "campaign_goal": "Recommend the best demand generation campaign for next quarter.",
+    "budget": "INR 12 lakh planning budget, not approved spend",
+    "constraints": [
+      "No automatic launch",
+      "Use existing webinar and benchmark assets"
+    ],
+    "business_context": "B2B SaaS platform entering enterprise RevOps.",
+    "target_audience": "RevOps and demand generation leaders",
+    "product_or_service": "Revenue workflow automation"
+  },
+  "id": "happy_path",
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": [
+      "Ranked campaign options",
+      "Primary recommendation",
+      "Dependencies"
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "input": {
+    "metrics": [
+      {
+        "label": "Spend",
+        "source": "Campaign report",
+        "value": "INR 6 lakh"
+      }
+    ],
+    "campaign_goal": "Analyze conversion drop-offs and recommend optimization priorities.",
+    "constraints": [
+      "Planning guidance only",
+      "Use supplied counts only"
+    ],
+    "business_context": "B2B SaaS platform analyzing webinar funnel performance.",
+    "funnel_stages": [
+      {
+        "count": 1000,
+        "stage": "Visitors"
+      },
+      {
+        "count": 120,
+        "stage": "Registrations"
+      },
+      {
+        "count": 75,
+        "stage": "Attendees"
+      },
+      {
+        "count": 15,
+        "stage": "Demo requests"
+      }
+    ],
+    "product_or_service": "Revenue workflow automation"
+  },
+  "id": "happy_path",
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": [
+      "Conversion rates",
+      "Drop-off analysis"
+    ],
+    "metric_value": "12.0%"
+  }
+}

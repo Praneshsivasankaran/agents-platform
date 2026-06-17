@@ -1,0 +1,100 @@
+# Agent 08 - ICP Identification Agent base config (mock provider / offline CI).
+
+provider: mock
+service: agent-08-icp-identification
+
+agent:
+  id: agent-08
+  name: icp-identification
+  version: 0.1.0
+  billable_stage: generate_icp_profiles
+
+llm:
+  provider: mock
+  tier_models:
+    cheap: mock/cheap
+    strong: mock/strong
+  stage_tiers:
+    generate_icp_profiles: strong
+
+quality:
+  pass_threshold: 82
+  approve_threshold: 88
+  revise_min_threshold: 65
+
+cost:
+  ceiling_inr: 35.0
+  is_mock: true
+  provider_currency: USD
+  fx_rates:
+    USD: 83.0
+  estimated_stage_cost_inr:
+    generate_icp_profiles: 5.0
+  output_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  input_cost_per_token_inr:
+    cheap: 0.0
+    strong: 0.0
+  fixed_cost_inr:
+    cheap: 0.0
+    strong: 0.0
+  max_prompt_tokens:
+    cheap: 16384
+    strong: 32768
+  max_output_tokens:
+    generate_icp_profiles: 8192
+
+telemetry:
+  provider: stdout
+  service: agent-08-icp-identification
+  extra_labels:
+    - intake_request
+    - analyze_context
+    - generate_recommendations
+    - generate_icp_profiles
+    - score_quality
+    - assemble_package
+    - intake_request.accepted
+    - intake_request.invalid
+    - analyze_context.complete
+    - generate_icp_profiles.complete
+    - generate_icp_profiles.provider_hiccup
+    - score_quality.complete
+    - assemble_package.complete
+    - route.decision
+    - node.error
+  dimensions:
+    node: [intake_request, analyze_context, generate_recommendations, generate_icp_profiles, score_quality, assemble_package]
+    tier: [cheap, strong, none]
+    provider: [mock, litellm, gcp, bedrock, azure]
+    status: [pass, needs_human, stopped_cost_ceiling, error, running]
+    decision: [ok, invalid, error]
+    target: [analyze_context, generate_recommendations, generate_icp_profiles, score_quality, assemble_package]
+  attr_keys:
+    - node
+    - span_id
+    - decision
+    - target
+    - status
+    - kind
+    - score
+    - risk_count
+    - evidence_count
+    - missing_count
+  extra_metric_names:
+    - stage.cost_inr
+    - total.cost_inr
+    - quality.overall_score
+
+object_storage:
+  provider: mock
+  bucket: mock-bucket
+  prefix: icp-identification/
+
+output_storage:
+  enabled: false
+  prefix: icp-identification/v1/
+
+secret_store:
+  provider: env

@@ -1,0 +1,18 @@
+{
+  "id": "inconsistent_denominator",
+  "input": {
+    "business_context": "B2B SaaS platform analyzing webinar funnel performance.",
+    "product_or_service": "Revenue workflow automation",
+    "campaign_goal": "Analyze conversion drop-offs and recommend optimization priorities.",
+    "funnel_stages": [
+      {"stage": "Visitors", "count": 100},
+      {"stage": "Registrations", "count": 140},
+      {"stage": "Demo requests", "count": 20}
+    ],
+    "constraints": ["Planning guidance only", "Use supplied counts only"]
+  },
+  "expected": {
+    "status": "needs_human",
+    "risk_category": "data_quality"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "happy_path",
+  "input": {
+    "business_context": "B2B SaaS workflow platform for revenue operations teams.",
+    "product_or_service": "Revenue workflow automation",
+    "source_notes": "Best customers are mid-market SaaS companies with complex lead handoffs, multi-step approvals, and RevOps ownership.",
+    "campaign_goal": "Define enterprise ICP for pipeline generation.",
+    "target_audience": "RevOps and demand generation leaders",
+    "constraints": [
+      "US and India",
+      "No protected-attribute targeting"
+    ]
+  },
+  "expected": {
+    "status": "pass",
+    "requires_recommendations": true,
+    "item_types": [
+      "Fit signals",
+      "Disqualifiers"
+    ]
+  }
+}
